@@ -1,0 +1,189 @@
+{
+  "timestamp": "2026-09-23T01:36:11.351567+00:00",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "cpu": "Apple M5",
+  "node": "v24.20.0",
+  "rust": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "bundleTraceCommit": "537b08500d0a0df2f543ebb63460da4ff441d15f",
+  "bundleTraceBinarySha256": "445b8a9a179b2193199c5c09610fcb720e3e2c1535bfad3e3b1dfc7692c939a0",
+  "tools": {
+    "bundle-trace": "0.1.0",
+    "source-map-explorer": "2.5.3",
+    "monocart-coverage-reports": "2.13.0"
+  },
+  "rounds": 9,
+  "warmupsPerJob": 1,
+  "shuffleSeed": 20260923,
+  "method": "Fresh serial processes, warm filesystem cache, wall clock including startup and report writing, wait4 per-child peak RSS. Input conversion/build/install/browser capture excluded. HTML means one self-contained file; JSON schemas and report features differ.",
+  "summary": [
+    {
+      "dataset": "blog-measured",
+      "tool": "bundle-trace",
+      "mode": "json",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 59.24375,
+        "min": 58.637917,
+        "max": 60.098666
+      },
+      "peakRssBytes": {
+        "median": 80265216,
+        "min": 79888384,
+        "max": 80478208
+      },
+      "reportBytes": {
+        "median": 207619,
+        "min": 207619,
+        "max": 207619
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 65.006583,
+        "min": 63.061625,
+        "max": 66.373792
+      },
+      "peakRssBytes": {
+        "median": 117719040,
+        "min": 116801536,
+        "max": 118882304
+      },
+      "reportBytes": {
+        "median": 92548,
+        "min": 92548,
+        "max": 92548
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "monocart",
+      "mode": "json",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 366.764709,
+        "min": 355.940208,
+        "max": 374.91425
+      },
+      "peakRssBytes": {
+        "median": 315080704,
+        "min": 310099968,
+        "max": 354091008
+      },
+      "reportBytes": {
+        "median": 4691871,
+        "min": 4691871,
+        "max": 4691871
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "bundle-trace",
+      "mode": "html",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 297.373375,
+        "min": 296.089125,
+        "max": 304.344333
+      },
+      "peakRssBytes": {
+        "median": 89161728,
+        "min": 88899584,
+        "max": 89309184
+      },
+      "reportBytes": {
+        "median": 2794444,
+        "min": 2794444,
+        "max": 2794444
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "html",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 74.208584,
+        "min": 72.733917,
+        "max": 79.574167
+      },
+      "peakRssBytes": {
+        "median": 126631936,
+        "min": 125960192,
+        "max": 130383872
+      },
+      "reportBytes": {
+        "median": 189907,
+        "min": 189907,
+        "max": 189907
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "monocart",
+      "mode": "html",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 414.91075,
+        "min": 406.885292,
+        "max": 422.725833
+      },
+      "peakRssBytes": {
+        "median": 318373888,
+        "min": 313982976,
+        "max": 352780288
+      },
+      "reportBytes": {
+        "median": 1807793,
+        "min": 1807793,
+        "max": 1807793
+      }
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "bundle-trace",
+      "mode": "static",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 481.873458,
+        "min": 479.648084,
+        "max": 485.847375
+      },
+      "peakRssBytes": {
+        "median": 427786240,
+        "min": 427474944,
+        "max": 427933696
+      },
+      "reportBytes": {
+        "median": 774898,
+        "min": 774898,
+        "max": 774898
+      }
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "static",
+      "samples": 9,
+      "elapsedMs": {
+        "median": 235.25575,
+        "min": 228.836291,
+        "max": 243.714542
+      },
+      "peakRssBytes": {
+        "median": 395952128,
+        "min": 383008768,
+        "max": 481460224
+      },
+      "reportBytes": {
+        "median": 332858,
+        "min": 332858,
+        "max": 332858
+      }
+    }
+  ]
+}

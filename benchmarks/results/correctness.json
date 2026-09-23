@@ -1,0 +1,1452 @@
+{
+  "datasets": [
+    {
+      "dataset": "recorded",
+      "bundles": 1,
+      "oracle": {
+        "bytes": 293,
+        "utf16Units": 281,
+        "observedBytes": 177,
+        "unobservedBytes": 116,
+        "unmeasuredBytes": 0,
+        "observedUtf16Units": 177
+      },
+      "bundleTrace": {
+        "totals": {
+          "bytes": 293,
+          "observedBytes": 177,
+          "unobservedBytes": 116,
+          "unmeasuredBytes": 0
+        },
+        "warnings": 1,
+        "oracleMatch": true,
+        "mappedObservedBytes": 136
+      },
+      "sourceMapExplorer": {
+        "default": {
+          "exitCode": 1,
+          "bundles": 0,
+          "expectedBundles": 1,
+          "fatalErrors": [
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 246 column(s) on that line.\nCheck that you are using the correct source map."
+            }
+          ],
+          "warnings": 0,
+          "totalBytes": 0,
+          "mappedBytes": 0,
+          "mappedCoveredBytes": 0
+        },
+        "relaxed": {
+          "exitCode": 0,
+          "bundles": 1,
+          "expectedBundles": 1,
+          "fatalErrors": [],
+          "warnings": 1,
+          "totalBytes": 293,
+          "mappedBytes": 252,
+          "mappedCoveredBytes": 136
+        }
+      },
+      "monocart": {
+        "default": {
+          "exitCode": 0,
+          "files": 3,
+          "summary": {
+            "bytes": {
+              "total": 406,
+              "covered": 260,
+              "uncovered": 146,
+              "pct": 64.04,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 7,
+              "covered": 4,
+              "uncovered": 3,
+              "pct": 57.14,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 4,
+              "covered": 2,
+              "uncovered": 2,
+              "pct": 50,
+              "status": "medium"
+            },
+            "functions": {
+              "total": 3,
+              "covered": 1,
+              "uncovered": 2,
+              "pct": 33.33,
+              "status": "low"
+            },
+            "lines": {
+              "total": 12,
+              "covered": 6,
+              "blank": 5,
+              "comment": 0,
+              "uncovered": 6,
+              "pct": 50,
+              "status": "medium"
+            }
+          }
+        },
+        "generated": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 281,
+              "covered": 177,
+              "uncovered": 104,
+              "pct": 62.99,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 8,
+              "covered": 5,
+              "uncovered": 3,
+              "pct": 62.5,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 4,
+              "covered": 2,
+              "uncovered": 2,
+              "pct": 50,
+              "status": "medium"
+            },
+            "functions": {
+              "total": 4,
+              "covered": 2,
+              "uncovered": 2,
+              "pct": 50,
+              "status": "medium"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 0,
+              "blank": 1,
+              "comment": 1,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            }
+          }
+        }
+      }
+    },
+    {
+      "dataset": "recorded-union",
+      "bundles": 1,
+      "oracle": {
+        "bytes": 293,
+        "utf16Units": 281,
+        "observedBytes": 208,
+        "unobservedBytes": 85,
+        "unmeasuredBytes": 0,
+        "observedUtf16Units": 204
+      },
+      "bundleTrace": {
+        "totals": {
+          "bytes": 293,
+          "observedBytes": 208,
+          "unobservedBytes": 85,
+          "unmeasuredBytes": 0
+        },
+        "warnings": 1,
+        "oracleMatch": true,
+        "mappedObservedBytes": 167
+      },
+      "sourceMapExplorer": {
+        "default": {
+          "exitCode": 1,
+          "bundles": 0,
+          "expectedBundles": 1,
+          "fatalErrors": [
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 246 column(s) on that line.\nCheck that you are using the correct source map."
+            }
+          ],
+          "warnings": 0,
+          "totalBytes": 0,
+          "mappedBytes": 0,
+          "mappedCoveredBytes": 0
+        },
+        "relaxed": {
+          "exitCode": 0,
+          "bundles": 1,
+          "expectedBundles": 1,
+          "fatalErrors": [],
+          "warnings": 1,
+          "totalBytes": 293,
+          "mappedBytes": 252,
+          "mappedCoveredBytes": 167
+        }
+      },
+      "monocart": {
+        "default": {
+          "exitCode": 0,
+          "files": 3,
+          "summary": {
+            "bytes": {
+              "total": 406,
+              "covered": 311,
+              "uncovered": 95,
+              "pct": 76.6,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 7,
+              "covered": 5,
+              "uncovered": 2,
+              "pct": 71.43,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 4,
+              "covered": 3,
+              "uncovered": 1,
+              "pct": 75,
+              "status": "medium"
+            },
+            "functions": {
+              "total": 3,
+              "covered": 2,
+              "uncovered": 1,
+              "pct": 66.67,
+              "status": "medium"
+            },
+            "lines": {
+              "total": 12,
+              "covered": 8,
+              "blank": 5,
+              "comment": 0,
+              "uncovered": 4,
+              "pct": 66.67,
+              "status": "medium"
+            }
+          }
+        },
+        "generated": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 281,
+              "covered": 204,
+              "uncovered": 77,
+              "pct": 72.6,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 8,
+              "covered": 6,
+              "uncovered": 2,
+              "pct": 75,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 4,
+              "covered": 3,
+              "uncovered": 1,
+              "pct": 75,
+              "status": "medium"
+            },
+            "functions": {
+              "total": 4,
+              "covered": 3,
+              "uncovered": 1,
+              "pct": 75,
+              "status": "medium"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 0,
+              "blank": 1,
+              "comment": 1,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            }
+          }
+        }
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "bundles": 13,
+      "oracle": {
+        "bytes": 672025,
+        "utf16Units": 671519,
+        "observedBytes": 278485,
+        "unobservedBytes": 393540,
+        "unmeasuredBytes": 0,
+        "observedUtf16Units": 278325
+      },
+      "bundleTrace": {
+        "totals": {
+          "bytes": 672025,
+          "observedBytes": 278485,
+          "unobservedBytes": 393540,
+          "unmeasuredBytes": 0
+        },
+        "warnings": 16,
+        "oracleMatch": true,
+        "mappedObservedBytes": 275410
+      },
+      "sourceMapExplorer": {
+        "default": {
+          "exitCode": 1,
+          "bundles": 0,
+          "expectedBundles": 13,
+          "fatalErrors": [
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column 12914 on line 1, but the source only contains 12912 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 20962 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 26904 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 40979 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 1934 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 265 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 29828 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column 88024 on line 1, but the source only contains 88023 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 227991 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 9258 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 29131 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 27373 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 10947 column(s) on that line.\nCheck that you are using the correct source map."
+            }
+          ],
+          "warnings": 0,
+          "totalBytes": 0,
+          "mappedBytes": 0,
+          "mappedCoveredBytes": 0
+        },
+        "relaxed": {
+          "exitCode": 0,
+          "bundles": 13,
+          "expectedBundles": 13,
+          "fatalErrors": [],
+          "warnings": 13,
+          "totalBytes": 672025,
+          "mappedBytes": 668285,
+          "mappedCoveredBytes": 275406
+        }
+      },
+      "monocart": {
+        "default": {
+          "exitCode": 0,
+          "files": 333,
+          "summary": {
+            "bytes": {
+              "total": 2359675,
+              "covered": 1319780,
+              "uncovered": 1039895,
+              "pct": 55.93,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 12121,
+              "covered": 4616,
+              "uncovered": 7505,
+              "pct": 38.08,
+              "status": "low"
+            },
+            "branches": {
+              "total": 12369,
+              "covered": 3595,
+              "uncovered": 8774,
+              "pct": 29.06,
+              "status": "low"
+            },
+            "functions": {
+              "total": 2853,
+              "covered": 1143,
+              "uncovered": 1710,
+              "pct": 40.06,
+              "status": "low"
+            },
+            "lines": {
+              "total": 52101,
+              "covered": 25039,
+              "blank": 3690,
+              "comment": 12357,
+              "uncovered": 27062,
+              "pct": 48.06,
+              "status": "low"
+            }
+          }
+        },
+        "generated": {
+          "exitCode": 0,
+          "files": 13,
+          "summary": {
+            "bytes": {
+              "total": 671519,
+              "covered": 376605,
+              "uncovered": 294914,
+              "pct": 56.08,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 13609,
+              "covered": 5443,
+              "uncovered": 8166,
+              "pct": 40,
+              "status": "low"
+            },
+            "branches": {
+              "total": 15073,
+              "covered": 4450,
+              "uncovered": 10623,
+              "pct": 29.52,
+              "status": "low"
+            },
+            "functions": {
+              "total": 3371,
+              "covered": 1328,
+              "uncovered": 2043,
+              "pct": 39.39,
+              "status": "low"
+            },
+            "lines": {
+              "total": 61,
+              "covered": 31,
+              "blank": 20,
+              "comment": 11,
+              "uncovered": 30,
+              "pct": 50.82,
+              "status": "medium"
+            }
+          }
+        }
+      }
+    },
+    {
+      "dataset": "blog-all",
+      "bundles": 107,
+      "oracle": {
+        "bytes": 7246076,
+        "utf16Units": 7240301,
+        "observedBytes": 278485,
+        "unobservedBytes": 393540,
+        "unmeasuredBytes": 6574051,
+        "observedUtf16Units": 278325
+      },
+      "bundleTrace": {
+        "totals": {
+          "bytes": 7246076,
+          "observedBytes": 278485,
+          "unobservedBytes": 393540,
+          "unmeasuredBytes": 6574051
+        },
+        "warnings": 51,
+        "oracleMatch": true,
+        "mappedObservedBytes": 275410
+      },
+      "sourceMapExplorer": {
+        "default": {
+          "exitCode": 1,
+          "bundles": 7,
+          "expectedBundles": 107,
+          "fatalErrors": [
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            },
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            },
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column 12914 on line 1, but the source only contains 12912 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 44462 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 262 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 1473098 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 260 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 34095 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 47283 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 9938 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 1002 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 35282 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 20962 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 262 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 4151 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 303 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 21101 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 274 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column 39636 on line 1, but the source only contains 39621 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 26904 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 25720 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 24776 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 109652 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 272 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 262 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 3733 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 256 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 28525 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 40979 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 3286 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 19346 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 429865 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 30884 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 169 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 2435 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 260 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 22707 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 270 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 1934 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 25008 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 29556 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 3691 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 45426 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 265 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 29640 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 29828 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 65146 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 342, but the source only contains 70310 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 44898 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 30317 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 236424 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 264 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 3483 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 22003 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 9100 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 258 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 7122 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 303 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 11137 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 303 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 1025 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column 88024 on line 1, but the source only contains 88023 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 252 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 48164 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 272 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 4865 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 9952 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 41687 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 37975 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 21546 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 227991 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 9258 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 14640 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column 21899 on line 1, but the source only contains 21897 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 264 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 42631 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 27573 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 2327 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 47194 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 261029 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 21197 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 303 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 30059 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 29699 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 48922 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 272 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 80916 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 29131 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 24766 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 11371 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 2225 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 41728 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 169 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 3113 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column 47893 on line 1, but the source only contains 47884 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 18547 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 27373 column(s) on that line.\nCheck that you are using the correct source map."
+            },
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 10947 column(s) on that line.\nCheck that you are using the correct source map."
+            }
+          ],
+          "warnings": 7,
+          "totalBytes": 311611,
+          "mappedBytes": 302637,
+          "mappedCoveredBytes": 0
+        },
+        "relaxed": {
+          "exitCode": 1,
+          "bundles": 103,
+          "expectedBundles": 107,
+          "fatalErrors": [
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            },
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            },
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            },
+            {
+              "code": "NoSourceMap",
+              "message": "Unable to find a source map.\nSee https://github.com/danvk/source-map-explorer/blob/master/README.md#generating-source-maps"
+            }
+          ],
+          "warnings": 103,
+          "totalBytes": 7125745,
+          "mappedBytes": 7033940,
+          "mappedCoveredBytes": 275406
+        }
+      },
+      "monocart": {
+        "default": {
+          "exitCode": 0,
+          "files": 333,
+          "summary": {
+            "bytes": {
+              "total": 2359675,
+              "covered": 1319780,
+              "uncovered": 1039895,
+              "pct": 55.93,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 12121,
+              "covered": 4616,
+              "uncovered": 7505,
+              "pct": 38.08,
+              "status": "low"
+            },
+            "branches": {
+              "total": 12369,
+              "covered": 3595,
+              "uncovered": 8774,
+              "pct": 29.06,
+              "status": "low"
+            },
+            "functions": {
+              "total": 2853,
+              "covered": 1143,
+              "uncovered": 1710,
+              "pct": 40.06,
+              "status": "low"
+            },
+            "lines": {
+              "total": 52101,
+              "covered": 25039,
+              "blank": 3690,
+              "comment": 12357,
+              "uncovered": 27062,
+              "pct": 48.06,
+              "status": "low"
+            }
+          }
+        },
+        "generated": {
+          "exitCode": 0,
+          "files": 13,
+          "summary": {
+            "bytes": {
+              "total": 671519,
+              "covered": 376605,
+              "uncovered": 294914,
+              "pct": 56.08,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 13609,
+              "covered": 5443,
+              "uncovered": 8166,
+              "pct": 40,
+              "status": "low"
+            },
+            "branches": {
+              "total": 15073,
+              "covered": 4450,
+              "uncovered": 10623,
+              "pct": 29.52,
+              "status": "low"
+            },
+            "functions": {
+              "total": 3371,
+              "covered": 1328,
+              "uncovered": 2043,
+              "pct": 39.39,
+              "status": "low"
+            },
+            "lines": {
+              "total": 61,
+              "covered": 31,
+              "blank": 20,
+              "comment": 11,
+              "uncovered": 30,
+              "pct": 50.82,
+              "status": "medium"
+            }
+          }
+        }
+      }
+    },
+    {
+      "dataset": "regex-template",
+      "bundles": 1,
+      "oracle": {
+        "bytes": 97,
+        "utf16Units": 97,
+        "observedBytes": 66,
+        "unobservedBytes": 31,
+        "unmeasuredBytes": 0,
+        "observedUtf16Units": 66
+      },
+      "bundleTrace": {
+        "totals": {
+          "bytes": 97,
+          "observedBytes": 66,
+          "unobservedBytes": 31,
+          "unmeasuredBytes": 0
+        },
+        "warnings": 1,
+        "oracleMatch": true,
+        "mappedObservedBytes": 66
+      },
+      "sourceMapExplorer": {
+        "default": {
+          "exitCode": 1,
+          "bundles": 0,
+          "expectedBundles": 1,
+          "fatalErrors": [
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 97 column(s) on that line.\nCheck that you are using the correct source map."
+            }
+          ],
+          "warnings": 0,
+          "totalBytes": 0,
+          "mappedBytes": 0,
+          "mappedCoveredBytes": 0
+        },
+        "relaxed": {
+          "exitCode": 0,
+          "bundles": 1,
+          "expectedBundles": 1,
+          "fatalErrors": [],
+          "warnings": 1,
+          "totalBytes": 97,
+          "mappedBytes": 97,
+          "mappedCoveredBytes": 66
+        }
+      },
+      "monocart": {
+        "default": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 97,
+              "covered": 97,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            },
+            "statements": {
+              "total": 1,
+              "covered": 1,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            },
+            "branches": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "functions": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 1,
+              "blank": 0,
+              "comment": 0,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            }
+          }
+        },
+        "generated": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 97,
+              "covered": 97,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            },
+            "statements": {
+              "total": 3,
+              "covered": 2,
+              "uncovered": 1,
+              "pct": 66.67,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "functions": {
+              "total": 1,
+              "covered": 0,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 1,
+              "blank": 0,
+              "comment": 0,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            }
+          }
+        }
+      }
+    },
+    {
+      "dataset": "regex-plain",
+      "bundles": 1,
+      "oracle": {
+        "bytes": 92,
+        "utf16Units": 92,
+        "observedBytes": 61,
+        "unobservedBytes": 31,
+        "unmeasuredBytes": 0,
+        "observedUtf16Units": 61
+      },
+      "bundleTrace": {
+        "totals": {
+          "bytes": 92,
+          "observedBytes": 61,
+          "unobservedBytes": 31,
+          "unmeasuredBytes": 0
+        },
+        "warnings": 1,
+        "oracleMatch": true,
+        "mappedObservedBytes": 61
+      },
+      "sourceMapExplorer": {
+        "default": {
+          "exitCode": 1,
+          "bundles": 0,
+          "expectedBundles": 1,
+          "fatalErrors": [
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 92 column(s) on that line.\nCheck that you are using the correct source map."
+            }
+          ],
+          "warnings": 0,
+          "totalBytes": 0,
+          "mappedBytes": 0,
+          "mappedCoveredBytes": 0
+        },
+        "relaxed": {
+          "exitCode": 0,
+          "bundles": 1,
+          "expectedBundles": 1,
+          "fatalErrors": [],
+          "warnings": 1,
+          "totalBytes": 92,
+          "mappedBytes": 92,
+          "mappedCoveredBytes": 61
+        }
+      },
+      "monocart": {
+        "default": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 92,
+              "covered": 92,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            },
+            "statements": {
+              "total": 1,
+              "covered": 1,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            },
+            "branches": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "functions": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 1,
+              "blank": 0,
+              "comment": 0,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            }
+          }
+        },
+        "generated": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 92,
+              "covered": 92,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            },
+            "statements": {
+              "total": 3,
+              "covered": 2,
+              "uncovered": 1,
+              "pct": 66.67,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "functions": {
+              "total": 1,
+              "covered": 0,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 1,
+              "blank": 0,
+              "comment": 0,
+              "uncovered": 0,
+              "pct": 100,
+              "status": "high"
+            }
+          }
+        }
+      }
+    },
+    {
+      "dataset": "regex-control",
+      "bundles": 1,
+      "oracle": {
+        "bytes": 98,
+        "utf16Units": 98,
+        "observedBytes": 67,
+        "unobservedBytes": 31,
+        "unmeasuredBytes": 0,
+        "observedUtf16Units": 67
+      },
+      "bundleTrace": {
+        "totals": {
+          "bytes": 98,
+          "observedBytes": 67,
+          "unobservedBytes": 31,
+          "unmeasuredBytes": 0
+        },
+        "warnings": 1,
+        "oracleMatch": true,
+        "mappedObservedBytes": 67
+      },
+      "sourceMapExplorer": {
+        "default": {
+          "exitCode": 1,
+          "bundles": 0,
+          "expectedBundles": 1,
+          "fatalErrors": [
+            {
+              "code": "InvalidMappingColumn",
+              "message": "Your source map refers to generated column Infinity on line 1, but the source only contains 98 column(s) on that line.\nCheck that you are using the correct source map."
+            }
+          ],
+          "warnings": 0,
+          "totalBytes": 0,
+          "mappedBytes": 0,
+          "mappedCoveredBytes": 0
+        },
+        "relaxed": {
+          "exitCode": 0,
+          "bundles": 1,
+          "expectedBundles": 1,
+          "fatalErrors": [],
+          "warnings": 1,
+          "totalBytes": 98,
+          "mappedBytes": 98,
+          "mappedCoveredBytes": 67
+        }
+      },
+      "monocart": {
+        "default": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 98,
+              "covered": 67,
+              "uncovered": 31,
+              "pct": 68.37,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 3,
+              "covered": 2,
+              "uncovered": 1,
+              "pct": 66.67,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "functions": {
+              "total": 1,
+              "covered": 0,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 0,
+              "blank": 0,
+              "comment": 0,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            }
+          }
+        },
+        "generated": {
+          "exitCode": 0,
+          "files": 1,
+          "summary": {
+            "bytes": {
+              "total": 98,
+              "covered": 67,
+              "uncovered": 31,
+              "pct": 68.37,
+              "status": "medium"
+            },
+            "statements": {
+              "total": 3,
+              "covered": 2,
+              "uncovered": 1,
+              "pct": 66.67,
+              "status": "medium"
+            },
+            "branches": {
+              "total": 0,
+              "covered": 0,
+              "uncovered": 0,
+              "pct": "",
+              "status": "unknown"
+            },
+            "functions": {
+              "total": 1,
+              "covered": 0,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            },
+            "lines": {
+              "total": 1,
+              "covered": 0,
+              "blank": 0,
+              "comment": 0,
+              "uncovered": 1,
+              "pct": 0,
+              "status": "low"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "regression": {
+    "dependencyVersion": "1.0.3",
+    "source": "const label = `${'a/b'.replace(/\\//g, '-')}`; globalThis.never = () => { throw Error('never'); };",
+    "nativeUncalledRange": {
+      "startOffset": 65,
+      "endOffset": 96,
+      "count": 0
+    },
+    "detectedComments": [
+      {
+        "block": false,
+        "start": 33,
+        "end": 97,
+        "text": "//g, '-')}`; globalThis.never = () => { throw Error('never'); };"
+      }
+    ],
+    "adjustedRange": {
+      "fixedStart": 97,
+      "fixedEnd": 96
+    }
+  }
+}

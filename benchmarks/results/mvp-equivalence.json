@@ -1,0 +1,55 @@
+{
+  "method": "Complete byte-for-byte JSON output comparison of original release binary and optimized release binary on eight prepared datasets, including detailed spans for recorded and blog-measured. Compression disabled, all hashes/warnings/source rows retained. Original fixtures and native-range browser checks provide independent correctness coverage.",
+  "pairs": [
+    {
+      "case": "blog-all-summary",
+      "byteIdentical": true,
+      "reportSha256": "53985ad5be88b0f10441285913d4b00301c8f738c3bdcb3c38fe747cbe682b93"
+    },
+    {
+      "case": "blog-mapped-summary",
+      "byteIdentical": true,
+      "reportSha256": "437d357e788b44a141093ce91eb6be335f235fe80412ea1bf992b857c0666756"
+    },
+    {
+      "case": "blog-measured-details",
+      "byteIdentical": true,
+      "reportSha256": "efeb34cd32bfab17c3bc789ca468f9e99a789854616194827a0e3d8352d7521b"
+    },
+    {
+      "case": "blog-measured-summary",
+      "byteIdentical": true,
+      "reportSha256": "09f42ce05b0a1d11e66b03515cabca35d4e98d37a33315015adcc688e492a56a"
+    },
+    {
+      "case": "recorded-details",
+      "byteIdentical": true,
+      "reportSha256": "8c72c77b065ec7a2ef2d42a3713a01de1ab1da94b22e78fa4d78d228287c20cd"
+    },
+    {
+      "case": "recorded-summary",
+      "byteIdentical": true,
+      "reportSha256": "2d1c3990881998dc3f6b204daba5656da0601956f5cc0720ddf9ef4374b54e50"
+    },
+    {
+      "case": "recorded-union-summary",
+      "byteIdentical": true,
+      "reportSha256": "df0d98423e090e612c2aa5bdc3e368724915bb529e32c263a2c052ca372276b6"
+    },
+    {
+      "case": "regex-control-summary",
+      "byteIdentical": true,
+      "reportSha256": "10937c15fdb9bf2b9fa7dd6e1a6c5fd0931bc54a05625ee50f6ccb39be20cca3"
+    },
+    {
+      "case": "regex-plain-summary",
+      "byteIdentical": true,
+      "reportSha256": "dac342367b4c300c58eb25931cde98ec12c08e1a489585ed9a187da7dd8bdc10"
+    },
+    {
+      "case": "regex-template-summary",
+      "byteIdentical": true,
+      "reportSha256": "20cae8ba34695d1b716b58810bf69c7f7cf25e9baacd7f404c4f5611d062b73e"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "bundle-trace-comparison",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "monocart-coverage-reports": "2.13.0",
+    "source-map-explorer": "2.5.3"
+  },
+  "packageManager": "pnpm@12.1.0"
+}

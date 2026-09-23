@@ -18,13 +18,17 @@ anyhow = "1"
 base64 = "0.22"
 brotli = "8"
 clap = { version = "4", features = ["derive"] }
-flate2 = "1"
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+glob = "0.3"
 globset = "0.4"
 percent-encoding = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 sourcemap = "9"
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+sha2 = { version = "0.10", features = ["asm"] }
 
 [profile.release]
 lto = "thin"

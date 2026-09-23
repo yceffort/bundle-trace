@@ -265,6 +265,7 @@
           <button id="view-original" aria-pressed="true">Original source</button><button id="view-generated" aria-pressed="false">Generated code</button>
         </div>
         <label>Coverage state <select id="status"><option value="all">All</option><option value="unobserved">Unobserved</option><option value="observed">Observed</option><option value="unmeasured">Unmeasured</option></select></label>
+        <label>Scenario <select id="code-scenario" aria-label="Code scenario"><option value="">All scenarios combined</option></select></label>
       </div>
       <div class="range-nav">
         <span id="active-range"></span>
@@ -310,7 +311,11 @@ __BUNDLE_TRACE_PAYLOADS__
   $('report-data').textContent = '';
   const number = n => n.toLocaleString('en-US');
   const labels = {observed: 'Observed', unobserved: 'Unobserved', unmeasured: 'Unmeasured'};
-  const state = {bundle: null, source: null, page: 0, inspector: false, focus: false, view: 'original'};
+  const state = {bundle: null, source: null, page: 0, inspector: false, focus: false, view: 'original', scenario: ''};
+  for (const name of report.scenarios) {
+    const option = document.createElement('option'); option.value = name; option.textContent = name;
+    $('code-scenario').append(option);
+  }
   let loaded = null, pending = null, codeRequest = 0;
   async function loadChunk(index) {
     if (loaded?.index === index) return loaded.bundle;
@@ -551,11 +556,18 @@ __BUNDLE_TRACE_PAYLOADS__
       return;
     }
     if (request !== codeRequest) return;
+    if (state.scenario) {
+      const scenario = report.scenarioReports.find(row => row.scenario === state.scenario);
+      const counts = scenario?.bundles.find(row => row.path === bundle.path);
+      const sources = new Map((counts?.sources || []).map(row => [row.source, row]));
+      bundle = {...bundle, ...(counts || {}), spans: bundle.scenarioSpans?.[state.scenario] || [],
+        sources: bundle.sources.map(source => ({...source, ...(sources.get(source.source) || {})}))};
+    }
     $('inspector').setAttribute('aria-busy', 'false');
     const source = state.source === null ? null : bundle.sources[state.source], status = $('status').value;
     const path = source ? source.source : bundle.path;
     $('source-title').textContent = basename(path);
-    $('source-meta').textContent = (source ? (source.package === '[application]' ? 'App code' : source.package) : 'Entire chunk') + ' · ' + size((source || bundle).bytes);
+    $('source-meta').textContent = (source ? (source.package === '[application]' ? 'App code' : source.package) : 'Entire chunk') + ' · ' + size((source || bundle).bytes) + ' · ' + (state.scenario || 'All scenarios combined');
     $('full-path').textContent = path;
     $('binding').textContent = bundle.verification.length ? bundle.verification.map(v => v.scenario + ' · source ' + v.source + ' / map ' + v.sourceMap).join(' | ') : 'No recording · all ranges are unmeasured';
     updateView();
@@ -647,9 +659,26 @@ __BUNDLE_TRACE_PAYLOADS__
   $('view-original').onclick = () => { state.view = 'original'; updateView(); };
   $('view-generated').onclick = () => { state.view = 'generated'; updateView(); };
   $('status').onchange = renderCode;
+  $('code-scenario').onchange = () => { state.scenario = $('code-scenario').value; renderCode(); };
   $('map-details').ontoggle = renderMap;
   window.addEventListener('resize', () => { renderMap(); scrollOriginal(); });
   render();
+  if (window.name.startsWith('bundle-trace:')) {
+    const selection = JSON.parse(window.name.slice('bundle-trace:'.length));
+    if (Number.isInteger(selection.bundle) && Number.isInteger(selection.source)
+        && report.bundles[selection.bundle]?.sources[selection.source]) {
+      state.bundle = selection.bundle;
+      if (report.scenarios.includes(selection.scenario)) {
+        state.scenario = selection.scenario;
+        $('code-scenario').value = state.scenario;
+      }
+      select(selection.source);
+      state.focus = true;
+      $('status').value = 'all';
+      render(); renderCode();
+      $('inspector').scrollIntoView({block: 'start'});
+    }
+  }
   performance.mark('bundle-trace:overview');
 })().catch(error => { document.getElementById('meta').textContent = 'Could not open the report: ' + error.message; });
 </script>

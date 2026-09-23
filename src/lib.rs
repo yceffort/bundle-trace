@@ -1,25 +1,31 @@
 pub mod attribution;
+pub mod baseline;
 pub mod ci;
 pub mod coverage;
+pub mod graph;
 pub mod input;
 pub mod maps;
 pub mod metadata;
+pub mod recommendations;
 pub mod report;
+pub mod scenario;
+pub mod selection;
+mod source_path;
 pub mod text;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use attribution::{Segment, UNMAPPED};
+use attribution::{IndexedSegment, IndexedSource, UNMAPPED};
 use coverage::Interval;
 use text::TextIndex;
 
-#[derive(Debug, Default, Clone, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Counts {
     pub bytes: usize,
@@ -42,13 +48,18 @@ impl Counts {
 pub struct SourceRow {
     pub source: String,
     pub package: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimated_compression: Option<ci::CompressedSizes>,
     #[serde(flatten)]
     pub counts: Counts,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PackageRow {
     pub package: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimated_compression: Option<ci::CompressedSizes>,
     #[serde(flatten)]
     pub counts: Counts,
 }
@@ -68,6 +79,8 @@ pub struct BundleRow {
     pub sources: Vec<BundleSource>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub spans: Vec<Span>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub scenario_spans: BTreeMap<String, Vec<Span>>,
     pub compression: Option<ci::CompressedSizes>,
     #[serde(flatten)]
     pub counts: Counts,
@@ -79,6 +92,8 @@ pub struct BundleSource {
     pub source: String,
     pub package: String,
     pub content: Option<String>,
+    pub first_observed: Vec<scenario::FirstObserved>,
+    pub estimated_compression: Option<ci::CompressedSizes>,
     #[serde(flatten)]
     pub counts: Counts,
 }
@@ -109,6 +124,13 @@ pub struct Span {
 
 #[derive(Debug)]
 pub struct AnalyzeOptions {
+    /// Named coverage scenario used to identify interaction-only execution.
+    pub initial_scenario: Option<String>,
+    /// Explicit first-observation ordering; default is coverage input order.
+    pub scenario_order: Vec<String>,
+    pub source_compression: bool,
+    /// Explicit paths relative to the analysis root; None scans the directory.
+    pub files: Option<Vec<PathBuf>>,
     pub input: input::InputOptions,
     pub maps: BTreeMap<String, PathBuf>,
     pub include: Vec<String>,
@@ -120,6 +142,10 @@ pub struct AnalyzeOptions {
 impl Default for AnalyzeOptions {
     fn default() -> Self {
         Self {
+            initial_scenario: None,
+            scenario_order: Vec::new(),
+            source_compression: false,
+            files: None,
             input: Default::default(),
             maps: Default::default(),
             include: Vec::new(),
@@ -133,11 +159,16 @@ impl Default for AnalyzeOptions {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Report {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub baseline: Option<baseline::Comparison>,
     pub schema_version: u32,
     pub details: bool,
     pub metric: &'static str,
     pub attribution: &'static str,
     pub scenarios: Vec<String>,
+    pub initial_scenario: Option<String>,
+    pub scenario_reports: Vec<scenario::ScenarioReport>,
+    pub source_paths: &'static str,
     pub totals: Counts,
     pub bundles: Vec<BundleRow>,
     pub sources: Vec<SourceRow>,
@@ -149,8 +180,10 @@ pub struct Report {
     pub compression: Option<ci::CompressedSizes>,
     pub budget_failures: Vec<String>,
     pub compression_settings: Option<&'static str>,
+    pub source_compression_method: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub import_paths: Option<Vec<metadata::ImportPath>>,
+    pub recommendations: Vec<recommendations::Recommendation>,
 }
 
 impl Report {
@@ -159,6 +192,7 @@ impl Report {
         for bundle in &mut self.bundles {
             bundle.generated_source.clear();
             bundle.spans.clear();
+            bundle.scenario_spans.clear();
             for source in &mut bundle.sources {
                 source.content = None;
             }
@@ -197,21 +231,76 @@ pub fn analyze_with_options(
     coverage_files: &[PathBuf],
     options: &AnalyzeOptions,
 ) -> Result<Report> {
-    let (mut coverage, scenarios, warnings) = input::load(coverage_files, dir, &options.input)?;
+    let canonical_root = fs::canonicalize(dir)?;
+    let (mut coverage, mut scenarios, warnings) = input::load(coverage_files, dir, &options.input)?;
+    let mut seen = BTreeSet::new();
+    scenarios.retain(|name| seen.insert(name.clone()));
+    if !options.scenario_order.is_empty() {
+        ensure!(
+            options.scenario_order.len() == scenarios.len()
+                && options.scenario_order.iter().collect::<BTreeSet<_>>()
+                    == scenarios.iter().collect(),
+            "--scenario-order must list every scenario exactly once: {scenarios:?}"
+        );
+        scenarios.clone_from(&options.scenario_order);
+    }
+    if let Some(initial) = &options.initial_scenario {
+        ensure!(
+            scenarios.contains(initial),
+            "unknown initial scenario {initial:?}; available scenarios: {scenarios:?}"
+        );
+        if options.scenario_order.is_empty() {
+            scenarios.retain(|name| name != initial);
+            scenarios.insert(0, initial.clone());
+        } else {
+            ensure!(
+                scenarios.first() == Some(initial),
+                "--initial-scenario must be first in --scenario-order"
+            );
+        }
+    }
+    let mut scenario_reports = scenarios
+        .iter()
+        .cloned()
+        .map(scenario::Accumulator::new)
+        .collect::<Vec<_>>();
     let mut files = Vec::new();
-    javascript_files(dir, &mut files)?;
+    if let Some(selected) = &options.files {
+        for path in selected {
+            coverage::validate_path(&path.to_string_lossy())?;
+            let file = dir.join(path);
+            ensure!(
+                file.is_file(),
+                "input file does not exist: {}",
+                file.display()
+            );
+            ensure!(
+                fs::canonicalize(&file)?.starts_with(fs::canonicalize(dir)?),
+                "input file escapes analysis root: {}",
+                file.display()
+            );
+            files.push(file);
+        }
+    } else {
+        javascript_files(dir, &mut files)?;
+    }
     files.sort();
+    files.dedup();
     ensure!(
         !files.is_empty(),
         "no JavaScript files in {}",
         dir.display()
     );
     let mut report = Report {
-        schema_version: 2,
+        baseline: None,
+        schema_version: 3,
         details: options.details,
         metric: "utf8-generated-source-bytes",
         attribution: "mapping-to-next-mapping-on-same-line; remaining bytes unmapped",
         scenarios,
+        initial_scenario: options.initial_scenario.clone(),
+        scenario_reports: Vec::new(),
+        source_paths: "analysis-root-relative; virtual URL dot components removed",
         totals: Counts::default(),
         bundles: Vec::new(),
         sources: Vec::new(),
@@ -222,8 +311,10 @@ pub fn analyze_with_options(
         exclude: options.exclude.clone(),
         compression: options.compression.then(ci::CompressedSizes::default),
         budget_failures: Vec::new(),
-        compression_settings: options.compression.then_some("gzip level=6 (flate2 default Rust backend); Brotli quality=5 lgwin=22; independent whole files"),
+        compression_settings: options.compression.then_some("gzip level=6 (flate2 zlib-rs backend); Brotli quality=5 lgwin=22; independent whole files"),
+        source_compression_method: options.source_compression.then_some("isolated attributed fragments in generated order per source per bundle; non-additive estimates, not measured transfer savings"),
         import_paths: None,
+        recommendations: Vec::new(),
     };
     for path in options.maps.keys() {
         coverage::validate_path(path)?;
@@ -231,7 +322,7 @@ pub fn analyze_with_options(
             files.iter().any(|file| file
                 .strip_prefix(dir)
                 .is_ok_and(|p| p.to_string_lossy().replace('\\', "/") == *path)),
-            "explicit map references file missing from --dir: {path}"
+            "explicit map references file missing from selected inputs: {path}"
         );
     }
     let mut source_counts: BTreeMap<String, Counts> = BTreeMap::new();
@@ -248,36 +339,49 @@ pub fn analyze_with_options(
             fs::read_to_string(&file).with_context(|| format!("read UTF-8 source {path}"))?;
         let text = TextIndex::new(&content);
         let hash = sha256(content.as_bytes());
-        let map_data = maps::load(&file, &content, dir, options.maps.get(&path))
+        let map_data = maps::load_with_location(&file, &content, dir, options.maps.get(&path))
             .with_context(|| format!("locate source map for {path}"))?;
-        let (segments, map_hash, mut contents) = if let Some(data) = map_data {
-            let attribution::Attribution {
+        let (segments, map_hash, mut sources) = if let Some(map) = map_data {
+            let attribution::IndexedAttribution {
                 segments,
                 invalid_points,
-                contents,
-            } = attribution::decode_with_contents(&data, &text, content.len(), options.details)
-                .with_context(|| format!("decode source map for {path}"))?;
+                sources,
+            } = attribution::decode_indexed(
+                &map.data,
+                &text,
+                content.len(),
+                options.details,
+                Some(&source_path::SourcePaths {
+                    root: &canonical_root,
+                    directory: &map.directory,
+                }),
+            )
+            .with_context(|| format!("decode source map for {path}"))?;
             if invalid_points > 0 {
                 report.warnings.push(format!("{path}: ignored {invalid_points} mapping points outside their line or inside a surrogate pair; attribution is approximate"));
             }
-            (segments, Some(sha256(&data)), contents)
+            (segments, Some(sha256(&map.data)), sources)
         } else {
             report
                 .warnings
                 .push(format!("{path}: no source map; entire source is unmapped"));
             (
-                vec![Segment {
+                vec![IndexedSegment {
                     start: 0,
                     end: content.len(),
-                    source: UNMAPPED.into(),
+                    source: 0,
                     original: None,
                 }],
                 None,
-                BTreeMap::new(),
+                vec![IndexedSource {
+                    name: UNMAPPED.into(),
+                    content: None,
+                }],
             )
         };
         let observations = coverage.remove(&path);
         let mut used = Vec::new();
+        let mut scenario_used: BTreeMap<String, Vec<Interval>> = BTreeMap::new();
         let mut verification = Vec::new();
         if let Some(observations) = &observations {
             for observation in observations {
@@ -300,11 +404,14 @@ pub fn analyze_with_options(
                 {
                     report.warnings.push(format!("{path}: executed function has function-only coverage; block detail unavailable"));
                 }
-                used.extend(
-                    observation
-                        .used(&text)
-                        .with_context(|| format!("normalize coverage for {path}"))?,
-                );
+                let ranges = observation
+                    .used(&text)
+                    .with_context(|| format!("normalize coverage for {path}"))?;
+                used.extend_from_slice(&ranges);
+                scenario_used
+                    .entry(observation.scenario.clone())
+                    .or_default()
+                    .extend(ranges);
             }
         }
         let used = coverage::union(used);
@@ -318,25 +425,65 @@ pub fn analyze_with_options(
                 })
             })
             .collect::<Result<_>>()?;
+        for ranges in scenario_used.values_mut() {
+            *ranges = coverage::union(std::mem::take(ranges))
+                .into_iter()
+                .map(|range| {
+                    Ok(Interval {
+                        start: text.byte(range.start)?,
+                        end: text.byte(range.end)?,
+                    })
+                })
+                .collect::<Result<_>>()?;
+        }
+        for scenario in &mut scenario_reports {
+            scenario.bundle(
+                &path,
+                &segments,
+                &sources,
+                &scenario_used,
+                options.initial_scenario.as_deref(),
+                options.source_compression.then_some(content.as_bytes()),
+            )?;
+        }
+        let phases =
+            scenario::first_observed(&report.scenarios, &segments, sources.len(), &scenario_used);
+        let estimates = if options.source_compression {
+            let mut fragments = vec![Vec::new(); sources.len()];
+            for segment in &segments {
+                fragments[segment.source]
+                    .extend_from_slice(&content.as_bytes()[segment.start..segment.end]);
+            }
+            fragments
+                .iter()
+                .map(|bytes| ci::compress(bytes).map(Some))
+                .collect::<Result<Vec<_>>>()?
+        } else {
+            vec![None; sources.len()]
+        };
         let mut counts = Counts::default();
         let mut mapped_bytes = 0;
         let mut used_index = 0;
         let mut bundle_sources: Vec<BundleSource> = Vec::new();
-        let mut source_indices = BTreeMap::new();
+        let mut source_indices = vec![None; sources.len()];
         let mut spans = Vec::new();
-        for segment in segments {
-            let source_index = *source_indices
-                .entry(segment.source.clone())
-                .or_insert_with(|| {
-                    let index = bundle_sources.len();
-                    bundle_sources.push(BundleSource {
-                        source: segment.source.clone(),
-                        package: attribution::package(&segment.source),
-                        content: contents.remove(&segment.source),
-                        counts: Counts::default(),
-                    });
-                    index
+        for segment in &segments {
+            let source_index = if let Some(index) = source_indices[segment.source] {
+                index
+            } else {
+                let source = &mut sources[segment.source];
+                let index = bundle_sources.len();
+                bundle_sources.push(BundleSource {
+                    source: source.name.clone(),
+                    package: attribution::package(&source.name),
+                    content: source.content.take(),
+                    first_observed: phases[segment.source].clone(),
+                    estimated_compression: estimates[segment.source].clone(),
+                    counts: Counts::default(),
                 });
+                source_indices[segment.source] = Some(index);
+                index
+            };
             let bytes = segment.end - segment.start;
             while used_index < used.len() && used[used_index].end <= segment.start {
                 used_index += 1;
@@ -361,13 +508,9 @@ pub fn analyze_with_options(
                 },
                 unmeasured_bytes: if observations.is_none() { bytes } else { 0 },
             };
-            if segment.source != UNMAPPED {
+            if segment.source != 0 {
                 mapped_bytes += bytes;
             }
-            source_counts
-                .entry(segment.source.clone())
-                .or_default()
-                .add(&row);
             bundle_sources[source_index].counts.add(&row);
             counts.add(&row);
             if options.details {
@@ -381,7 +524,7 @@ pub fn analyze_with_options(
                             end_utf16: text.utf16(end)?,
                             source: source_index,
                             status,
-                            original: segment.original.clone(),
+                            original: segment.original,
                         });
                     }
                     Ok(())
@@ -407,6 +550,12 @@ pub fn analyze_with_options(
             counts.bytes == content.len(),
             "{path}: source attribution lost bytes"
         );
+        for source in &bundle_sources {
+            source_counts
+                .entry(source.source.clone())
+                .or_default()
+                .add(&source.counts);
+        }
         report.totals.add(&counts);
         let compression = if options.compression {
             Some(ci::compress(content.as_bytes())?)
@@ -432,6 +581,25 @@ pub fn analyze_with_options(
             },
             sources: bundle_sources,
             spans,
+            scenario_spans: if options.details {
+                report
+                    .scenarios
+                    .iter()
+                    .map(|name| {
+                        Ok((
+                            name.clone(),
+                            scenario::spans(
+                                &segments,
+                                scenario_used.get(name).map(Vec::as_slice),
+                                &source_indices,
+                                &text,
+                            )?,
+                        ))
+                    })
+                    .collect::<Result<_>>()?
+            } else {
+                BTreeMap::new()
+            },
             compression,
             counts,
         });
@@ -440,38 +608,93 @@ pub fn analyze_with_options(
         !report.bundles.is_empty(),
         "no JavaScript files selected by --include/--exclude"
     );
+    if options.files.is_some() && !coverage.is_empty() {
+        let root = fs::canonicalize(dir)?;
+        coverage.retain(|path, _| {
+            let file = dir.join(path);
+            // Keep missing/outside paths as errors: a wrong URL prefix must not
+            // silently turn selected bundles into unmeasured code.
+            if file.is_file() && fs::canonicalize(&file).is_ok_and(|file| file.starts_with(&root)) {
+                report
+                    .warnings
+                    .push(format!("skipped coverage for unselected file: {path}"));
+                false
+            } else {
+                true
+            }
+        });
+    }
     ensure!(
         coverage.is_empty(),
-        "coverage references files missing from --dir: {:?}",
+        "coverage references files missing from analysis root {}: {:?}; check --dir, --url-prefix, or --script-map",
+        dir.display(),
         coverage.keys().collect::<Vec<_>>()
     );
+    (report.sources, report.packages) = aggregate_sources(source_counts);
+    if options.source_compression {
+        let mut estimates: BTreeMap<String, ci::CompressedSizes> = BTreeMap::new();
+        let mut packages: BTreeMap<String, ci::CompressedSizes> = BTreeMap::new();
+        for source in report.bundles.iter().flat_map(|bundle| &bundle.sources) {
+            if let Some(estimate) = &source.estimated_compression {
+                estimates
+                    .entry(source.source.clone())
+                    .or_default()
+                    .add(estimate);
+                packages
+                    .entry(source.package.clone())
+                    .or_default()
+                    .add(estimate);
+            }
+        }
+        for source in &mut report.sources {
+            source.estimated_compression = estimates.remove(&source.source);
+        }
+        for package in &mut report.packages {
+            package.estimated_compression = packages.remove(&package.package);
+        }
+    }
+    report.scenario_reports = scenario_reports
+        .into_iter()
+        .map(scenario::Accumulator::finish)
+        .collect();
+    report.recommendations = recommendations::build(&report);
+    report.warnings.sort();
+    report.warnings.dedup();
+    Ok(report)
+}
+
+fn aggregate_sources(source_counts: BTreeMap<String, Counts>) -> (Vec<SourceRow>, Vec<PackageRow>) {
+    let mut sources = Vec::new();
     let mut packages: BTreeMap<String, Counts> = BTreeMap::new();
     for (source, counts) in source_counts {
         let package = attribution::package(&source);
         packages.entry(package.clone()).or_default().add(&counts);
-        report.sources.push(SourceRow {
+        sources.push(SourceRow {
             source,
             package,
+            estimated_compression: None,
             counts,
         });
     }
-    report.sources.sort_by(|a, b| {
+    sources.sort_by(|a, b| {
         b.counts
             .bytes
             .cmp(&a.counts.bytes)
             .then(a.source.cmp(&b.source))
     });
-    report.packages = packages
+    let mut packages: Vec<_> = packages
         .into_iter()
-        .map(|(package, counts)| PackageRow { package, counts })
+        .map(|(package, counts)| PackageRow {
+            package,
+            counts,
+            estimated_compression: None,
+        })
         .collect();
-    report.packages.sort_by(|a, b| {
+    packages.sort_by(|a, b| {
         b.counts
             .bytes
             .cmp(&a.counts.bytes)
             .then(a.package.cmp(&b.package))
     });
-    report.warnings.sort();
-    report.warnings.dedup();
-    Ok(report)
+    (sources, packages)
 }

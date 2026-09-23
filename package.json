@@ -5,13 +5,22 @@
   "type": "module",
   "scripts": {
     "build": "cargo build --locked --release",
-    "test": "cargo test --locked && pnpm test:browser",
-    "test:browser": "node scripts/verify.mjs && node scripts/verify-formats.mjs && node scripts/verify-collector.mjs",
+    "test": "cargo test --locked && pnpm test:browser && pnpm test:corpus",
+    "test:corpus": "node scripts/verify-graphs.mjs && node scripts/verify-corpus.mjs",
+    "test:browser": "node scripts/verify.mjs && node scripts/verify-formats.mjs && node scripts/verify-collector.mjs && node scripts/verify-treemap.mjs && node scripts/verify-comparison.mjs",
     "collect": "node scripts/collect.mjs"
   },
   "devDependencies": {
+    "@babel/parser": "7.29.9",
+    "@jridgewell/trace-mapping": "0.3.31",
     "@playwright/test": "1.63.0",
-    "esbuild": "0.25.12"
+    "esbuild": "0.28.2",
+    "next": "16.3.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "rollup": "4.63.4",
+    "vite": "8.3.0",
+    "webpack": "5.111.1"
   },
   "engines": {
     "node": ">=24"

@@ -36,13 +36,17 @@ struct Contribution {
     bytes_in_output: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportPath {
     pub source: String,
+    /// Source-map identity after binding the build working directory.
+    pub resolved_source: Option<String>,
     pub bytes_in_output: usize,
     /// One shortest path in the esbuild input graph; not a runtime call graph.
     pub path: Option<Vec<String>>,
+    pub graph_format: String,
+    pub edges: Vec<crate::graph::ImportStep>,
 }
 
 pub fn import_paths(data: &[u8]) -> Result<Vec<ImportPath>> {
@@ -85,6 +89,9 @@ pub fn import_paths(data: &[u8]) -> Result<Vec<ImportPath>> {
         .into_iter()
         .filter(|(_, bytes)| *bytes > 0)
         .map(|(source, bytes_in_output)| ImportPath {
+            graph_format: "esbuild".into(),
+            edges: Vec::new(),
+            resolved_source: None,
             path: paths.remove(&source),
             source,
             bytes_in_output,
@@ -96,4 +103,21 @@ pub fn import_paths(data: &[u8]) -> Result<Vec<ImportPath>> {
             .then(a.source.cmp(&b.source))
     });
     Ok(result)
+}
+
+pub fn bind_sources(
+    paths: &mut [ImportPath],
+    analysis_root: &std::path::Path,
+    build_root: &std::path::Path,
+) -> Result<()> {
+    let root = std::fs::canonicalize(analysis_root)?;
+    let directory = std::fs::canonicalize(build_root)?;
+    let resolver = crate::source_path::SourcePaths {
+        root: &root,
+        directory: &directory,
+    };
+    for row in paths {
+        row.resolved_source = Some(resolver.resolve(&row.source));
+    }
+    Ok(())
 }

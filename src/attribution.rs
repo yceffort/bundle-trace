@@ -15,7 +15,7 @@ pub struct Segment {
     pub original: Option<OriginalPosition>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct OriginalPosition {
     pub line: u32,
     pub column: u32,
@@ -25,6 +25,24 @@ pub struct Attribution {
     pub segments: Vec<Segment>,
     pub invalid_points: usize,
     pub contents: BTreeMap<String, String>,
+}
+
+pub(crate) struct IndexedSegment {
+    pub start: usize,
+    pub end: usize,
+    pub source: usize,
+    pub original: Option<OriginalPosition>,
+}
+
+pub(crate) struct IndexedSource {
+    pub name: String,
+    pub content: Option<String>,
+}
+
+pub(crate) struct IndexedAttribution {
+    pub segments: Vec<IndexedSegment>,
+    pub sources: Vec<IndexedSource>,
+    pub invalid_points: usize,
 }
 
 /// Attribute each mapping to the next mapping on the SAME line or line end.
@@ -52,59 +70,100 @@ pub fn decode_with_contents(
     byte_len: usize,
     retain_contents: bool,
 ) -> Result<Attribution> {
+    let decoded = decode_indexed(data, text, byte_len, retain_contents, None)?;
+    Ok(Attribution {
+        segments: decoded
+            .segments
+            .into_iter()
+            .map(|s| Segment {
+                start: s.start,
+                end: s.end,
+                source: decoded.sources[s.source].name.clone(),
+                original: s.original,
+            })
+            .collect(),
+        invalid_points: decoded.invalid_points,
+        contents: decoded
+            .sources
+            .into_iter()
+            .filter_map(|s| s.content.map(|content| (s.name, content)))
+            .collect(),
+    })
+}
+
+pub(crate) fn decode_indexed(
+    data: &[u8],
+    text: &TextIndex,
+    byte_len: usize,
+    retain_contents: bool,
+    source_paths: Option<&crate::source_path::SourcePaths<'_>>,
+) -> Result<IndexedAttribution> {
     validate_map(&serde_json::from_slice(data)?)?;
     let map = sourcemap::decode_slice(data)?;
     let mut decoder = Decoder {
         text,
         retain_contents,
-        points: BTreeMap::new(),
-        contents: BTreeMap::new(),
+        source_paths,
+        points: Vec::new(),
+        sources: vec![IndexedSource {
+            name: UNMAPPED.into(),
+            content: None,
+        }],
+        source_ids: BTreeMap::from([(UNMAPPED.to_owned(), 0)]),
         invalid_points: 0,
     };
     decoder.collect(&map, (0, 0), None)?;
-    let mut points = Vec::new();
-    for ((line, column), (source, original)) in decoder.points {
-        points.push((text.position(line, column)?, line, source, original));
+    // Stable ordering preserves last-mapping-wins at duplicate positions,
+    // including explicit boundaries of empty/nested index-map sections.
+    if !decoder.points.is_sorted_by_key(|p| p.position) {
+        decoder.points.sort_by_key(|p| p.position);
     }
-    let mut result = Vec::new();
+    let mut points = decoder.points.into_iter().peekable();
+    let mut result = Vec::with_capacity(points.len() + 1);
     let mut cursor = 0;
-    for (index, (start, line, source, original)) in points.iter().enumerate() {
-        ensure!(*start >= cursor, "overlapping source-map segments");
-        if *start > cursor {
-            result.push(Segment {
+    while let Some(mut point) = points.next() {
+        while points
+            .peek()
+            .is_some_and(|next| next.position == point.position)
+        {
+            point = points.next().unwrap();
+        }
+        let start = point.byte;
+        ensure!(start >= cursor, "overlapping source-map segments");
+        if start > cursor {
+            result.push(IndexedSegment {
                 start: cursor,
-                end: *start,
-                source: UNMAPPED.into(),
+                end: start,
+                source: 0,
                 original: None,
             });
         }
-        let end = points
-            .get(index + 1)
-            .filter(|(_, next_line, _, _)| next_line == line)
-            .map(|(position, _, _, _)| *position)
-            .unwrap_or(text.line_end(*line)?);
-        if end > *start {
-            result.push(Segment {
-                start: *start,
+        let end = match points.peek() {
+            Some(next) if next.position.0 == point.position.0 => next.byte,
+            _ => text.line_end(point.position.0)?,
+        };
+        if end > start {
+            result.push(IndexedSegment {
+                start,
                 end,
-                source: source.clone(),
-                original: original.clone(),
+                source: point.source,
+                original: point.original,
             });
         }
         cursor = end;
     }
     if cursor < byte_len {
-        result.push(Segment {
+        result.push(IndexedSegment {
             start: cursor,
             end: byte_len,
-            source: UNMAPPED.into(),
+            source: 0,
             original: None,
         });
     }
-    Ok(Attribution {
+    Ok(IndexedAttribution {
         segments: result,
+        sources: decoder.sources,
         invalid_points: decoder.invalid_points,
-        contents: decoder.contents,
     })
 }
 
@@ -125,11 +184,20 @@ fn offset_position(base: Position, local: Position) -> Result<Position> {
     ))
 }
 
+struct Point {
+    position: Position,
+    byte: usize,
+    source: usize,
+    original: Option<OriginalPosition>,
+}
+
 struct Decoder<'a> {
     text: &'a TextIndex,
     retain_contents: bool,
-    points: BTreeMap<Position, (String, Option<OriginalPosition>)>,
-    contents: BTreeMap<String, String>,
+    source_paths: Option<&'a crate::source_path::SourcePaths<'a>>,
+    points: Vec<Point>,
+    sources: Vec<IndexedSource>,
+    source_ids: BTreeMap<String, usize>,
     invalid_points: usize,
 }
 
@@ -153,10 +221,13 @@ impl Decoder<'_> {
                         end.is_none_or(|end| start < end),
                         "index-map section starts outside its parent section"
                     );
-                    self.text.position(start.0, start.1)?;
-                    // A section boundary exists even if its map is empty or its
-                    // first mapping starts later. Flattening loses this boundary.
-                    self.points.insert(start, (UNMAPPED.into(), None));
+                    let byte = self.text.position(start.0, start.1)?;
+                    self.points.push(Point {
+                        position: start,
+                        byte,
+                        source: 0,
+                        original: None,
+                    });
                     self.collect(
                         section.get_sourcemap().ok_or_else(|| {
                             anyhow::anyhow!("index-map section has no embedded map")
@@ -167,21 +238,39 @@ impl Decoder<'_> {
                 }
             }
             DecodedMap::Regular(map) => {
-                if self.retain_contents {
-                    for i in 0..map.get_source_count() {
-                        if let (Some(source), Some(content)) =
-                            (map.get_source(i), map.get_source_contents(i))
-                        {
-                            if let Some(previous) = self.contents.get(source) {
-                                ensure!(
-                                    previous == content,
-                                    "conflicting sourcesContent for {source}"
-                                );
-                            }
-                            self.contents.insert(source.to_owned(), content.to_owned());
+                // Resolve each source path once per map, never once per token.
+                let mut ids = Vec::with_capacity(map.get_source_count() as usize);
+                for i in 0..map.get_source_count() {
+                    let source = map.get_source(i).unwrap_or(UNMAPPED);
+                    let source = self
+                        .source_paths
+                        .map_or_else(|| source.to_owned(), |paths| paths.resolve(source));
+                    let id = if let Some(&id) = self.source_ids.get(&source) {
+                        id
+                    } else {
+                        let id = self.sources.len();
+                        self.sources.push(IndexedSource {
+                            name: source.clone(),
+                            content: None,
+                        });
+                        self.source_ids.insert(source.clone(), id);
+                        id
+                    };
+                    if self.retain_contents
+                        && let Some(content) = map.get_source_contents(i)
+                    {
+                        if let Some(previous) = &self.sources[id].content {
+                            ensure!(
+                                previous == content,
+                                "conflicting sourcesContent for {source}"
+                            );
+                        } else {
+                            self.sources[id].content = Some(content.into());
                         }
                     }
+                    ids.push(id);
                 }
+                self.points.reserve(map.get_token_count() as usize);
                 for token in map.tokens() {
                     let position =
                         offset_position(offset, (token.get_dst_line(), token.get_dst_col()))?;
@@ -189,26 +278,24 @@ impl Decoder<'_> {
                         end.is_none_or(|end| position <= end),
                         "source-map mapping overlaps the next section"
                     );
-                    // A terminal mapping owns no bytes across a section boundary.
                     if end == Some(position) {
                         continue;
                     }
                     self.text.line_end(position.0)?;
-                    if self.text.position(position.0, position.1).is_err() {
+                    let Ok(byte) = self.text.position(position.0, position.1) else {
                         self.invalid_points += 1;
                         continue;
-                    }
-                    // At duplicate generated positions, the last mapping wins.
-                    self.points.insert(
+                    };
+                    let source = ids.get(token.get_src_id() as usize).copied().unwrap_or(0);
+                    self.points.push(Point {
                         position,
-                        (
-                            token.get_source().unwrap_or(UNMAPPED).to_owned(),
-                            token.get_source().map(|_| OriginalPosition {
-                                line: token.get_src_line(),
-                                column: token.get_src_col(),
-                            }),
-                        ),
-                    );
+                        byte,
+                        source,
+                        original: token.get_source().map(|_| OriginalPosition {
+                            line: token.get_src_line(),
+                            column: token.get_src_col(),
+                        }),
+                    });
                 }
             }
         }

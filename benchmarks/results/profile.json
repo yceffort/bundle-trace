@@ -1,0 +1,845 @@
+{
+  "method": "Isolated instrumented source copy, release profile unchanged; one warmup and randomized serial fresh processes. Stage timers are nested; stage medians do not sum exactly. Production runs bound instrumentation overhead. RSS is per child, not cumulative.",
+  "summary": [
+    {
+      "variant": "production",
+      "mode": "static",
+      "medianWallMs": 483.177209,
+      "medianPeakRssBytes": 427802624
+    },
+    {
+      "variant": "production",
+      "mode": "html",
+      "medianWallMs": 298.13625,
+      "medianPeakRssBytes": 89178112
+    },
+    {
+      "variant": "instrumented",
+      "mode": "static",
+      "medianWallMs": 482.898084,
+      "medianPeakRssBytes": 427081728,
+      "medianStageMs": {
+        "aggregation_and_spans": 127.127455,
+        "analyze_total": 473.753917,
+        "attribution_total": 249.74334,
+        "coverage_normalization": 0.006457,
+        "hash_js": 12.270454,
+        "hash_map": 50.367498,
+        "json_total_and_write": 0.652291,
+        "load_map": 5.415381,
+        "main_total": 476.720083,
+        "map_json_validation": 14.569997,
+        "mapping_tree": 107.59908,
+        "points_conversion": 18.299835,
+        "read_js": 2.361336,
+        "segments_build": 26.822497,
+        "sourcemap_decode": 62.068585,
+        "text_index": 26.06392
+      },
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      }
+    },
+    {
+      "variant": "instrumented",
+      "mode": "html",
+      "medianWallMs": 298.762709,
+      "medianPeakRssBytes": 94535680,
+      "medianStageMs": {
+        "aggregation_and_spans": 22.280001,
+        "analyze_total": 61.875,
+        "attribution_total": 24.369917,
+        "coverage_normalization": 0.307499,
+        "hash_js": 1.158042,
+        "hash_map": 6.369626,
+        "html_embed_compression_base64": 226.263293,
+        "html_total_and_write": 232.860334,
+        "load_map": 0.673124,
+        "main_total": 295.12375,
+        "map_json_validation": 2.119585,
+        "mapping_tree": 9.407665,
+        "points_conversion": 1.557083,
+        "read_js": 0.331791,
+        "segments_build": 3.059127,
+        "sourcemap_decode": 6.289084,
+        "text_index": 2.931125
+      },
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      }
+    }
+  ],
+  "samples": [
+    {
+      "round": -1,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 589.711333,
+      "peakRssBytes": 94699520,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 26444040,
+        "analyze_total": 85427375,
+        "attribution_total": 30015457,
+        "coverage_normalization": 426418,
+        "hash_js": 1478584,
+        "hash_map": 7688042,
+        "html_embed_compression_base64": 223445583,
+        "html_total_and_write": 230215041,
+        "load_map": 3660083,
+        "main_total": 316345458,
+        "map_json_validation": 2711335,
+        "mapping_tree": 11689209,
+        "points_conversion": 1717416,
+        "read_js": 2921585,
+        "segments_build": 3683499,
+        "sourcemap_decode": 8076417,
+        "text_index": 4069500
+      }
+    },
+    {
+      "round": -1,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 303.381167,
+      "peakRssBytes": 89292800
+    },
+    {
+      "round": -1,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 525.433375,
+      "peakRssBytes": 427900928
+    },
+    {
+      "round": -1,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 486.04,
+      "peakRssBytes": 427507712,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 126127005,
+        "analyze_total": 476624250,
+        "attribution_total": 253865203,
+        "coverage_normalization": 5250,
+        "hash_js": 12264417,
+        "hash_map": 49981248,
+        "json_total_and_write": 3528625,
+        "load_map": 5550496,
+        "main_total": 480445417,
+        "map_json_validation": 14458292,
+        "mapping_tree": 107322209,
+        "points_conversion": 19620496,
+        "read_js": 2314299,
+        "segments_build": 28060332,
+        "sourcemap_decode": 62620497,
+        "text_index": 25825624
+      }
+    },
+    {
+      "round": 0,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 295.264208,
+      "peakRssBytes": 94535680,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 22030959,
+        "analyze_total": 61666625,
+        "attribution_total": 24369917,
+        "coverage_normalization": 321498,
+        "hash_js": 1135625,
+        "hash_map": 6323500,
+        "html_embed_compression_base64": 223427667,
+        "html_total_and_write": 229866750,
+        "load_map": 653210,
+        "main_total": 291751667,
+        "map_json_validation": 2070165,
+        "mapping_tree": 9407665,
+        "points_conversion": 1562044,
+        "read_js": 327374,
+        "segments_build": 3059127,
+        "sourcemap_decode": 6289084,
+        "text_index": 2877042
+      }
+    },
+    {
+      "round": 0,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 296.96925,
+      "peakRssBytes": 88752128
+    },
+    {
+      "round": 0,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 480.528417,
+      "peakRssBytes": 427802624
+    },
+    {
+      "round": 0,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 478.796833,
+      "peakRssBytes": 427081728,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 127127455,
+        "analyze_total": 471482000,
+        "attribution_total": 247466041,
+        "coverage_normalization": 5829,
+        "hash_js": 12309786,
+        "hash_map": 50488167,
+        "json_total_and_write": 559084,
+        "load_map": 5174583,
+        "main_total": 472333875,
+        "map_json_validation": 14484835,
+        "mapping_tree": 106159670,
+        "points_conversion": 17812291,
+        "read_js": 2290332,
+        "segments_build": 26339584,
+        "sourcemap_decode": 61950378,
+        "text_index": 25916162
+      }
+    },
+    {
+      "round": 1,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 299.012375,
+      "peakRssBytes": 89227264
+    },
+    {
+      "round": 1,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 482.898084,
+      "peakRssBytes": 427081728,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 127231918,
+        "analyze_total": 473753917,
+        "attribution_total": 249009126,
+        "coverage_normalization": 6206,
+        "hash_js": 12279751,
+        "hash_map": 50257704,
+        "json_total_and_write": 2679708,
+        "load_map": 5676327,
+        "main_total": 476720083,
+        "map_json_validation": 14781167,
+        "mapping_tree": 107952834,
+        "points_conversion": 18128250,
+        "read_js": 2430548,
+        "segments_build": 26184540,
+        "sourcemap_decode": 62354961,
+        "text_index": 26150005
+      }
+    },
+    {
+      "round": 1,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 482.309084,
+      "peakRssBytes": 427687936
+    },
+    {
+      "round": 1,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 299.947458,
+      "peakRssBytes": 95125504,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 22280001,
+        "analyze_total": 62821417,
+        "attribution_total": 24802832,
+        "coverage_normalization": 320792,
+        "hash_js": 1189627,
+        "hash_map": 6421334,
+        "html_embed_compression_base64": 226381082,
+        "html_total_and_write": 232990542,
+        "load_map": 695125,
+        "main_total": 296023833,
+        "map_json_validation": 2131373,
+        "mapping_tree": 9523584,
+        "points_conversion": 1557083,
+        "read_js": 343747,
+        "segments_build": 3100749,
+        "sourcemap_decode": 6462210,
+        "text_index": 2911127
+      }
+    },
+    {
+      "round": 2,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 298.13625,
+      "peakRssBytes": 89309184
+    },
+    {
+      "round": 2,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 299.773083,
+      "peakRssBytes": 94666752,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 22624707,
+        "analyze_total": 62759250,
+        "attribution_total": 24422709,
+        "coverage_normalization": 295458,
+        "hash_js": 1227625,
+        "hash_map": 6542374,
+        "html_embed_compression_base64": 226173376,
+        "html_total_and_write": 232800917,
+        "load_map": 711250,
+        "main_total": 295774625,
+        "map_json_validation": 2157331,
+        "mapping_tree": 9349123,
+        "points_conversion": 1558958,
+        "read_js": 318166,
+        "segments_build": 3091126,
+        "sourcemap_decode": 6284707,
+        "text_index": 2966377
+      }
+    },
+    {
+      "round": 2,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 489.045792,
+      "peakRssBytes": 427098112,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 128060337,
+        "analyze_total": 479569500,
+        "attribution_total": 253658085,
+        "coverage_normalization": 7790,
+        "hash_js": 12290047,
+        "hash_map": 50740545,
+        "json_total_and_write": 2840917,
+        "load_map": 5438163,
+        "main_total": 482716000,
+        "map_json_validation": 14724005,
+        "mapping_tree": 107507537,
+        "points_conversion": 20219668,
+        "read_js": 2428288,
+        "segments_build": 27648247,
+        "sourcemap_decode": 62006710,
+        "text_index": 26229876
+      }
+    },
+    {
+      "round": 2,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 483.177209,
+      "peakRssBytes": 427835392
+    },
+    {
+      "round": 3,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 483.345916,
+      "peakRssBytes": 427081728,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 127628662,
+        "analyze_total": 473625417,
+        "attribution_total": 248821335,
+        "coverage_normalization": 6918,
+        "hash_js": 12505666,
+        "hash_map": 50268256,
+        "json_total_and_write": 3432834,
+        "load_map": 5394874,
+        "main_total": 477352875,
+        "map_json_validation": 14569997,
+        "mapping_tree": 106997041,
+        "points_conversion": 18299835,
+        "read_js": 2245709,
+        "segments_build": 26612336,
+        "sourcemap_decode": 62070041,
+        "text_index": 26063920
+      }
+    },
+    {
+      "round": 3,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 298.886834,
+      "peakRssBytes": 94552064,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 21496625,
+        "analyze_total": 62200375,
+        "attribution_total": 25101625,
+        "coverage_normalization": 310417,
+        "hash_js": 1152709,
+        "hash_map": 6369626,
+        "html_embed_compression_base64": 226495167,
+        "html_total_and_write": 232951334,
+        "load_map": 724876,
+        "main_total": 295386208,
+        "map_json_validation": 2197084,
+        "mapping_tree": 9709166,
+        "points_conversion": 1700542,
+        "read_js": 354460,
+        "segments_build": 3326916,
+        "sourcemap_decode": 6397459,
+        "text_index": 3068665
+      }
+    },
+    {
+      "round": 3,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 298.347458,
+      "peakRssBytes": 89948160
+    },
+    {
+      "round": 3,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 485.195708,
+      "peakRssBytes": 427720704
+    },
+    {
+      "round": 4,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 480.447792,
+      "peakRssBytes": 427016192,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 127131414,
+        "analyze_total": 471424667,
+        "attribution_total": 247163668,
+        "coverage_normalization": 5871,
+        "hash_js": 12270454,
+        "hash_map": 50524211,
+        "json_total_and_write": 2591917,
+        "load_map": 5307626,
+        "main_total": 474311334,
+        "map_json_validation": 14687707,
+        "mapping_tree": 106122415,
+        "points_conversion": 17757297,
+        "read_js": 2350710,
+        "segments_build": 26531915,
+        "sourcemap_decode": 61612209,
+        "text_index": 25956998
+      }
+    },
+    {
+      "round": 4,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 296.67625,
+      "peakRssBytes": 88391680,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 21924914,
+        "analyze_total": 60963666,
+        "attribution_total": 23778124,
+        "coverage_normalization": 307499,
+        "hash_js": 1134832,
+        "hash_map": 6436041,
+        "html_embed_compression_base64": 225341665,
+        "html_total_and_write": 231844375,
+        "load_map": 649002,
+        "main_total": 293036584,
+        "map_json_validation": 2069416,
+        "mapping_tree": 9370290,
+        "points_conversion": 1397083,
+        "read_js": 304706,
+        "segments_build": 2949707,
+        "sourcemap_decode": 6242500,
+        "text_index": 2889916
+      }
+    },
+    {
+      "round": 4,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 299.089375,
+      "peakRssBytes": 88866816
+    },
+    {
+      "round": 4,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 482.089416,
+      "peakRssBytes": 427507712
+    },
+    {
+      "round": 5,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 298.947125,
+      "peakRssBytes": 94470144,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 22285209,
+        "analyze_total": 62046667,
+        "attribution_total": 24132168,
+        "coverage_normalization": 290250,
+        "hash_js": 1213997,
+        "hash_map": 6307041,
+        "html_embed_compression_base64": 226499249,
+        "html_total_and_write": 232919833,
+        "load_map": 646625,
+        "main_total": 295180792,
+        "map_json_validation": 2118750,
+        "mapping_tree": 9330792,
+        "points_conversion": 1430039,
+        "read_js": 314336,
+        "segments_build": 3041334,
+        "sourcemap_decode": 6459460,
+        "text_index": 2893833
+      }
+    },
+    {
+      "round": 5,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 297.75625,
+      "peakRssBytes": 88670208
+    },
+    {
+      "round": 5,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 484.4765,
+      "peakRssBytes": 427098112,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 126422333,
+        "analyze_total": 478206458,
+        "attribution_total": 254642998,
+        "coverage_normalization": 6457,
+        "hash_js": 12128456,
+        "hash_map": 50367498,
+        "json_total_and_write": 558625,
+        "load_map": 5539626,
+        "main_total": 479055542,
+        "map_json_validation": 14596291,
+        "mapping_tree": 107709332,
+        "points_conversion": 20033995,
+        "read_js": 2332038,
+        "segments_build": 27478038,
+        "sourcemap_decode": 62636123,
+        "text_index": 26085747
+      }
+    },
+    {
+      "round": 5,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 485.445709,
+      "peakRssBytes": 427819008
+    },
+    {
+      "round": 6,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 297.97425,
+      "peakRssBytes": 89096192
+    },
+    {
+      "round": 6,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 298.384208,
+      "peakRssBytes": 88948736,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 22321417,
+        "analyze_total": 61604209,
+        "attribution_total": 23688584,
+        "coverage_normalization": 287542,
+        "hash_js": 1166292,
+        "hash_map": 6312834,
+        "html_embed_compression_base64": 226263293,
+        "html_total_and_write": 232803000,
+        "load_map": 653583,
+        "main_total": 294632667,
+        "map_json_validation": 2155584,
+        "mapping_tree": 9146251,
+        "points_conversion": 1391582,
+        "read_js": 343541,
+        "segments_build": 2891499,
+        "sourcemap_decode": 6264002,
+        "text_index": 2940831
+      }
+    },
+    {
+      "round": 6,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 480.500167,
+      "peakRssBytes": 427491328
+    },
+    {
+      "round": 6,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 484.511083,
+      "peakRssBytes": 427098112,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 126665166,
+        "analyze_total": 478043166,
+        "attribution_total": 253466960,
+        "coverage_normalization": 8663,
+        "hash_js": 12244581,
+        "hash_map": 49923295,
+        "json_total_and_write": 558166,
+        "load_map": 5868334,
+        "main_total": 478899084,
+        "map_json_validation": 14520546,
+        "mapping_tree": 107640501,
+        "points_conversion": 19574082,
+        "read_js": 2783412,
+        "segments_build": 27188629,
+        "sourcemap_decode": 62787798,
+        "text_index": 26384209
+      }
+    },
+    {
+      "round": 7,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 483.433291,
+      "peakRssBytes": 427900928
+    },
+    {
+      "round": 7,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 297.668792,
+      "peakRssBytes": 89178112
+    },
+    {
+      "round": 7,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 480.297792,
+      "peakRssBytes": 426983424,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 126733501,
+        "analyze_total": 473846125,
+        "attribution_total": 250481338,
+        "coverage_normalization": 6579,
+        "hash_js": 12218429,
+        "hash_map": 50085749,
+        "json_total_and_write": 652291,
+        "load_map": 5323744,
+        "main_total": 474839291,
+        "map_json_validation": 14386796,
+        "mapping_tree": 108136409,
+        "points_conversion": 18339495,
+        "read_js": 2412212,
+        "segments_build": 26939084,
+        "sourcemap_decode": 62068585,
+        "text_index": 25894920
+      }
+    },
+    {
+      "round": 7,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 298.353792,
+      "peakRssBytes": 93667328,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 21727126,
+        "analyze_total": 61802500,
+        "attribution_total": 24745081,
+        "coverage_normalization": 299333,
+        "hash_js": 1155418,
+        "hash_map": 6364874,
+        "html_embed_compression_base64": 226458207,
+        "html_total_and_write": 232860334,
+        "load_map": 712585,
+        "main_total": 294873250,
+        "map_json_validation": 2119585,
+        "mapping_tree": 9643041,
+        "points_conversion": 1644917,
+        "read_js": 331791,
+        "segments_build": 3209623,
+        "sourcemap_decode": 6301210,
+        "text_index": 2942876
+      }
+    },
+    {
+      "round": 8,
+      "variant": "production",
+      "mode": "html",
+      "wallMs": 298.537,
+      "peakRssBytes": 89178112
+    },
+    {
+      "round": 8,
+      "variant": "production",
+      "mode": "static",
+      "wallMs": 483.299666,
+      "peakRssBytes": 427851776
+    },
+    {
+      "round": 8,
+      "variant": "instrumented",
+      "mode": "static",
+      "wallMs": 480.404167,
+      "peakRssBytes": 427130880,
+      "counts": {
+        "mapping_points": 1860534,
+        "segments": 1861819,
+        "text_index_allocated_bytes_sum": 307609600
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 126642293,
+        "analyze_total": 473638833,
+        "attribution_total": 249743340,
+        "coverage_normalization": 5080,
+        "hash_js": 12097830,
+        "hash_map": 50610210,
+        "json_total_and_write": 552250,
+        "load_map": 5415381,
+        "main_total": 474478166,
+        "map_json_validation": 14480464,
+        "mapping_tree": 107599080,
+        "points_conversion": 18279290,
+        "read_js": 2361336,
+        "segments_build": 26822497,
+        "sourcemap_decode": 61822036,
+        "text_index": 26057297
+      }
+    },
+    {
+      "round": 8,
+      "variant": "instrumented",
+      "mode": "html",
+      "wallMs": 298.762709,
+      "peakRssBytes": 94535680,
+      "counts": {
+        "html_uncompressed_json_bytes": 9287046,
+        "mapping_points": 150525,
+        "segments": 150565,
+        "text_index_allocated_bytes_sum": 28590080
+      },
+      "nanoseconds": {
+        "aggregation_and_spans": 22286584,
+        "analyze_total": 61875000,
+        "attribution_total": 24078915,
+        "coverage_normalization": 338707,
+        "hash_js": 1158042,
+        "hash_map": 6386000,
+        "html_embed_compression_base64": 226090376,
+        "html_total_and_write": 233013167,
+        "load_map": 673124,
+        "main_total": 295123750,
+        "map_json_validation": 2081334,
+        "mapping_tree": 9568083,
+        "points_conversion": 1529249,
+        "read_js": 368749,
+        "segments_build": 3048916,
+        "sourcemap_decode": 6226124,
+        "text_index": 2931125
+      }
+    }
+  ],
+  "commit": "537b08500d0a0df2f543ebb63460da4ff441d15f",
+  "outputsByteIdentical": true,
+  "binarySha256": {
+    "production": "445b8a9a179b2193199c5c09610fcb720e3e2c1535bfad3e3b1dfc7692c939a0",
+    "instrumented": "868a089ab434e45f37c3f5a7d72b22f281a187ba9da7b4b0126e0664fe967976"
+  }
+}

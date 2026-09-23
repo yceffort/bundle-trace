@@ -41,10 +41,27 @@ pub fn load(
     root: &Path,
     explicit: Option<&PathBuf>,
 ) -> Result<Option<Vec<u8>>> {
+    Ok(load_with_location(file, content, root, explicit)?.map(|map| map.data))
+}
+
+pub(crate) struct LoadedMap {
+    pub data: Vec<u8>,
+    /// Directory for resolving sources, including for inline maps.
+    pub directory: PathBuf,
+}
+
+pub(crate) fn load_with_location(
+    file: &Path,
+    content: &str,
+    root: &Path,
+    explicit: Option<&PathBuf>,
+) -> Result<Option<LoadedMap>> {
     if let Some(path) = explicit {
-        return Ok(Some(fs::read(path).with_context(|| {
-            format!("read explicit map {}", path.display())
-        })?));
+        return Ok(Some(LoadedMap {
+            data: fs::read(path)
+                .with_context(|| format!("read explicit map {}", path.display()))?,
+            directory: fs::canonicalize(path)?.parent().unwrap().to_path_buf(),
+        }));
     }
     if let Some(reference) = annotation(content).and_then(|s| s.strip_prefix("data:")) {
         let (metadata, payload) = reference
@@ -58,8 +75,8 @@ pub fn load(
             "unsupported source-map data URL media type"
         );
         let payload = percent_encoding::percent_decode_str(payload).collect::<Vec<_>>();
-        return Ok(Some(
-            if metadata
+        return Ok(Some(LoadedMap {
+            data: if metadata
                 .split(';')
                 .any(|part| part.eq_ignore_ascii_case("base64"))
             {
@@ -69,10 +86,16 @@ pub fn load(
             } else {
                 payload
             },
-        ));
+            directory: fs::canonicalize(file)?.parent().unwrap().to_path_buf(),
+        }));
     }
     locate(file, content, root)?
-        .map(fs::read)
+        .map(|path| -> std::io::Result<LoadedMap> {
+            Ok(LoadedMap {
+                data: fs::read(&path)?,
+                directory: path.parent().unwrap().to_path_buf(),
+            })
+        })
         .transpose()
         .context("read source map")
 }

@@ -1,0 +1,80 @@
+{
+  "node": "v25.9.0",
+  "results": [
+    {
+      "bundler": "esbuild",
+      "version": "0.28.2",
+      "generatedBytes": 459,
+      "oracleDisagreementBytes": 0,
+      "oracleDisagreementPercent": 0,
+      "markerBytes": 67,
+      "markerErrorBytes": 0,
+      "markerErrorPercent": 0,
+      "duplicateMappingBytes": 0,
+      "defaultOracleDisagreementBytes": 0,
+      "checkedScenarioBundles": 4,
+      "graphMatchedSources": 4,
+      "negativeControlDetected": true
+    },
+    {
+      "bundler": "rollup",
+      "version": "4.63.4",
+      "generatedBytes": 586,
+      "oracleDisagreementBytes": 0,
+      "oracleDisagreementPercent": 0,
+      "markerBytes": 67,
+      "markerErrorBytes": 0,
+      "markerErrorPercent": 0,
+      "duplicateMappingBytes": 0,
+      "defaultOracleDisagreementBytes": 0,
+      "checkedScenarioBundles": 4,
+      "graphMatchedSources": 4,
+      "negativeControlDetected": true
+    },
+    {
+      "bundler": "vite",
+      "version": "8.3.0",
+      "generatedBytes": 2398,
+      "oracleDisagreementBytes": 0,
+      "oracleDisagreementPercent": 0,
+      "markerBytes": 67,
+      "markerErrorBytes": 0,
+      "markerErrorPercent": 0,
+      "duplicateMappingBytes": 0,
+      "defaultOracleDisagreementBytes": 0,
+      "checkedScenarioBundles": 4,
+      "graphMatchedSources": 4,
+      "negativeControlDetected": true
+    },
+    {
+      "bundler": "webpack",
+      "version": "5.111.1",
+      "generatedBytes": 2608,
+      "oracleDisagreementBytes": 0,
+      "oracleDisagreementPercent": 0,
+      "markerBytes": 67,
+      "markerErrorBytes": 0,
+      "markerErrorPercent": 0,
+      "duplicateMappingBytes": 0,
+      "defaultOracleDisagreementBytes": 0,
+      "checkedScenarioBundles": 4,
+      "graphMatchedSources": 5,
+      "negativeControlDetected": true
+    },
+    {
+      "bundler": "next-turbopack",
+      "version": "16.3.6",
+      "generatedBytes": 425670,
+      "oracleDisagreementBytes": 0,
+      "oracleDisagreementPercent": 0,
+      "markerBytes": 67,
+      "markerErrorBytes": 22,
+      "markerErrorPercent": 32.83582089552239,
+      "duplicateMappingBytes": 3178,
+      "defaultOracleDisagreementBytes": 27,
+      "checkedScenarioBundles": 17,
+      "graphMatchedSources": 20,
+      "negativeControlDetected": true
+    }
+  ]
+}

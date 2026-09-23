@@ -1,0 +1,113 @@
+//! Review suggestions grounded in measured scenarios and explicit import evidence.
+use crate::{
+    Report, attribution::UNMAPPED, ci::CompressedSizes, graph::ImportKind, metadata::ImportPath,
+};
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recommendation {
+    pub kind: &'static str,
+    pub source: String,
+    pub scenario: Option<String>,
+    pub bytes: usize,
+    pub estimated_compression: Option<CompressedSizes>,
+    pub import_path: Option<ImportPath>,
+    pub explanation: &'static str,
+}
+
+pub fn build(report: &Report) -> Vec<Recommendation> {
+    let mut result = Vec::new();
+    let initial = report
+        .scenario_reports
+        .iter()
+        .find(|s| Some(&s.scenario) == report.initial_scenario.as_ref());
+    for scenario in &report.scenario_reports {
+        for candidate in &scenario.interaction_candidates {
+            if candidate.source == UNMAPPED {
+                continue;
+            }
+            let path = report.import_paths.as_ref().and_then(|paths| {
+                paths
+                    .iter()
+                    .find(|p| p.resolved_source.as_ref() == Some(&candidate.source))
+            });
+            let initial_counts = initial
+                .and_then(|s| s.sources.iter().find(|s| s.source == candidate.source))
+                .map(|s| &s.counts);
+            let static_chain = path.is_some_and(|p| {
+                !p.edges.is_empty() && p.edges.iter().all(|e| e.kind == ImportKind::Static)
+            });
+            let dynamic_chain =
+                path.is_some_and(|p| p.edges.iter().any(|e| e.kind == ImportKind::Dynamic));
+            let (kind, explanation) = if candidate.initial_unmeasured_observed_bytes > 0
+                || initial_counts.is_none_or(|c| c.unmeasured_bytes > 0)
+            {
+                (
+                    "measure-initial",
+                    "Record this source in the initial scenario before inferring deferrable bytes. Missing coverage does not prove the chunk was absent from the initial load.",
+                )
+            } else if static_chain && initial_counts.is_some_and(|c| c.observed_bytes > 0) {
+                (
+                    "split-review",
+                    "A static import chain reaches this source, and part of it executes initially. Consider separating the later-only functionality before introducing import(); deferring the whole module may break initial behavior.",
+                )
+            } else if static_chain {
+                (
+                    "defer-review",
+                    "A static import chain reaches this source. It was measured but not observed initially and executes in this interaction. Review moving the import behind this interaction, checking side effects and rebuilding to measure transfer savings.",
+                )
+            } else if dynamic_chain {
+                (
+                    "dynamic-boundary-review",
+                    "The recorded graph path already crosses import(). Check when that boundary is invoked or prefetched before adding another split; this path does not establish all routes to the module.",
+                )
+            } else {
+                (
+                    "inspect-imports",
+                    "These measured bytes execute in this interaction but not initially. Inspect the import graph and side effects before choosing a lazy-loading boundary.",
+                )
+            };
+            result.push(Recommendation {
+                kind,
+                source: candidate.source.clone(),
+                scenario: Some(scenario.scenario.clone()),
+                bytes: candidate.interaction_only_bytes
+                    + candidate.initial_unmeasured_observed_bytes,
+                estimated_compression: if kind == "measure-initial" {
+                    None
+                } else {
+                    candidate.estimated_deferrable_compression.clone()
+                },
+                import_path: path.cloned(),
+                explanation,
+            });
+        }
+    }
+    for source in &report.sources {
+        if source.source == UNMAPPED
+            || source.counts.observed_bytes > 0
+            || report.scenario_reports.is_empty()
+        {
+            continue;
+        }
+        let fully_measured = report.scenario_reports.iter().all(|scenario| {
+            scenario
+                .sources
+                .iter()
+                .any(|s| s.source == source.source && s.counts.unmeasured_bytes == 0)
+        });
+        if fully_measured {
+            result.push(Recommendation { kind: "removal-review", source: source.source.clone(), scenario: None,
+                bytes: source.counts.bytes, estimated_compression: source.estimated_compression.clone(), import_path: None,
+                explanation: "No execution was observed in any supplied scenario, and each scenario measured this source. Review missing user flows, side effects and tests before removing it; coverage alone does not prove removal is safe." });
+        }
+    }
+    result.sort_by(|a, b| {
+        b.bytes
+            .cmp(&a.bytes)
+            .then(a.source.cmp(&b.source))
+            .then(a.scenario.cmp(&b.scenario))
+    });
+    result
+}

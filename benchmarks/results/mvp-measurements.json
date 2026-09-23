@@ -1,0 +1,1603 @@
+{
+  "timestamp": "2026-09-23T05:26:50.165589+00:00",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "node": "v24.20.0",
+  "rust": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "baseCommit": "537b08500d0a0df2f543ebb63460da4ff441d15f",
+  "workingTreeDiffSha256": "c1a8e67b4cd09e605a51d1c574905fc5fd787913b31497e2b91aa8670a0ddc70",
+  "binarySha256": {
+    "before": "445b8a9a179b2193199c5c09610fcb720e3e2c1535bfad3e3b1dfc7692c939a0",
+    "after": "bce33bbf3b47d3faacee3eb89ad7a32ba927536c137897db4e27d4e330946e86"
+  },
+  "rounds": 9,
+  "warmupsPerJob": 1,
+  "seed": 20260923,
+  "summaryJsonByteIdentical": true,
+  "method": "Randomized serial fresh processes, warm filesystem, startup and writes included; one warmup per job. SME 2.5.3/source-map 0.7.6, relaxed bounds. Same saved inputs. Treemap and inspect are distinct features, not interchangeable HTML workloads.",
+  "summary": [
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "elapsedMs": {
+        "median": 473.393375,
+        "min": 470.937291,
+        "max": 475.19975
+      },
+      "peakRssBytes": {
+        "median": 427786240,
+        "min": 427311104,
+        "max": 427900928
+      },
+      "reportBytes": {
+        "median": 774898,
+        "min": 774898,
+        "max": 774898
+      }
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "elapsedMs": {
+        "median": 136.438459,
+        "min": 134.676958,
+        "max": 137.522209
+      },
+      "peakRssBytes": {
+        "median": 114540544,
+        "min": 114442240,
+        "max": 114638848
+      },
+      "reportBytes": {
+        "median": 774898,
+        "min": 774898,
+        "max": 774898
+      }
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "elapsedMs": {
+        "median": 230.163125,
+        "min": 223.255375,
+        "max": 245.945375
+      },
+      "peakRssBytes": {
+        "median": 386105344,
+        "min": 383975424,
+        "max": 397312000
+      },
+      "reportBytes": {
+        "median": 332858,
+        "min": 332858,
+        "max": 332858
+      }
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "elapsedMs": {
+        "median": 135.647709,
+        "min": 134.290417,
+        "max": 136.366334
+      },
+      "peakRssBytes": {
+        "median": 114671616,
+        "min": 114491392,
+        "max": 114786304
+      },
+      "reportBytes": {
+        "median": 472351,
+        "min": 472351,
+        "max": 472351
+      }
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "elapsedMs": {
+        "median": 257.750708,
+        "min": 255.547625,
+        "max": 259.521042
+      },
+      "peakRssBytes": {
+        "median": 384581632,
+        "min": 383778816,
+        "max": 399294464
+      },
+      "reportBytes": {
+        "median": 505345,
+        "min": 505345,
+        "max": 505345
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "elapsedMs": {
+        "median": 58.460166,
+        "min": 57.887375,
+        "max": 59.9055
+      },
+      "peakRssBytes": {
+        "median": 79888384,
+        "min": 79773696,
+        "max": 80445440
+      },
+      "reportBytes": {
+        "median": 207619,
+        "min": 207619,
+        "max": 207619
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "elapsedMs": {
+        "median": 20.843041,
+        "min": 20.335417,
+        "max": 21.197458
+      },
+      "peakRssBytes": {
+        "median": 28213248,
+        "min": 28065792,
+        "max": 28590080
+      },
+      "reportBytes": {
+        "median": 207619,
+        "min": 207619,
+        "max": 207619
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "elapsedMs": {
+        "median": 64.468,
+        "min": 62.801042,
+        "max": 65.839334
+      },
+      "peakRssBytes": {
+        "median": 117637120,
+        "min": 117489664,
+        "max": 117932032
+      },
+      "reportBytes": {
+        "median": 92548,
+        "min": 92548,
+        "max": 92548
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "elapsedMs": {
+        "median": 20.566292,
+        "min": 20.410625,
+        "max": 20.964667
+      },
+      "peakRssBytes": {
+        "median": 28213248,
+        "min": 28033024,
+        "max": 28327936
+      },
+      "reportBytes": {
+        "median": 134709,
+        "min": 134709,
+        "max": 134709
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "elapsedMs": {
+        "median": 73.345542,
+        "min": 71.995834,
+        "max": 73.906917
+      },
+      "peakRssBytes": {
+        "median": 126582784,
+        "min": 124878848,
+        "max": 126926848
+      },
+      "reportBytes": {
+        "median": 189907,
+        "min": 189907,
+        "max": 189907
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "elapsedMs": {
+        "median": 294.462917,
+        "min": 293.194166,
+        "max": 296.437834
+      },
+      "peakRssBytes": {
+        "median": 89227264,
+        "min": 88817664,
+        "max": 89309184
+      },
+      "reportBytes": {
+        "median": 2794444,
+        "min": 2794444,
+        "max": 2794444
+      }
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "elapsedMs": {
+        "median": 116.04725,
+        "min": 115.717,
+        "max": 116.62075
+      },
+      "peakRssBytes": {
+        "median": 48349184,
+        "min": 48168960,
+        "max": 48594944
+      },
+      "reportBytes": {
+        "median": 2835684,
+        "min": 2835684,
+        "max": 2835684
+      }
+    }
+  ],
+  "samples": [
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": -1,
+      "order": 0,
+      "elapsedMs": 92.186042,
+      "peakRssBytes": 126976000,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": -1,
+      "order": 1,
+      "elapsedMs": 332.426333,
+      "peakRssBytes": 29966336,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": -1,
+      "order": 2,
+      "elapsedMs": 239.11175,
+      "peakRssBytes": 396361728,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": -1,
+      "order": 3,
+      "elapsedMs": 475.412666,
+      "peakRssBytes": 427769856,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": -1,
+      "order": 4,
+      "elapsedMs": 137.482333,
+      "peakRssBytes": 114720768,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": -1,
+      "order": 5,
+      "elapsedMs": 21.049875,
+      "peakRssBytes": 28262400,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": -1,
+      "order": 6,
+      "elapsedMs": 64.698291,
+      "peakRssBytes": 117522432,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": -1,
+      "order": 7,
+      "elapsedMs": 294.566709,
+      "peakRssBytes": 89276416,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": -1,
+      "order": 8,
+      "elapsedMs": 116.447167,
+      "peakRssBytes": 48283648,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": -1,
+      "order": 9,
+      "elapsedMs": 271.773625,
+      "peakRssBytes": 388415488,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": -1,
+      "order": 10,
+      "elapsedMs": 135.627459,
+      "peakRssBytes": 115048448,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": -1,
+      "order": 11,
+      "elapsedMs": 58.478666,
+      "peakRssBytes": 79839232,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 0,
+      "order": 0,
+      "elapsedMs": 245.945375,
+      "peakRssBytes": 385957888,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 0,
+      "order": 1,
+      "elapsedMs": 296.437834,
+      "peakRssBytes": 89194496,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 0,
+      "order": 2,
+      "elapsedMs": 136.031,
+      "peakRssBytes": 114442240,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 0,
+      "order": 3,
+      "elapsedMs": 257.750708,
+      "peakRssBytes": 383778816,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 0,
+      "order": 4,
+      "elapsedMs": 73.615875,
+      "peakRssBytes": 126795776,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 0,
+      "order": 5,
+      "elapsedMs": 21.197458,
+      "peakRssBytes": 28065792,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 0,
+      "order": 6,
+      "elapsedMs": 59.9055,
+      "peakRssBytes": 80445440,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 0,
+      "order": 7,
+      "elapsedMs": 64.361542,
+      "peakRssBytes": 117489664,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 0,
+      "order": 8,
+      "elapsedMs": 475.183958,
+      "peakRssBytes": 427884544,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 0,
+      "order": 9,
+      "elapsedMs": 116.4295,
+      "peakRssBytes": 48349184,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 0,
+      "order": 10,
+      "elapsedMs": 136.273917,
+      "peakRssBytes": 114737152,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 0,
+      "order": 11,
+      "elapsedMs": 20.411875,
+      "peakRssBytes": 28065792,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 1,
+      "order": 0,
+      "elapsedMs": 65.839334,
+      "peakRssBytes": 117587968,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 1,
+      "order": 1,
+      "elapsedMs": 20.958625,
+      "peakRssBytes": 28131328,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 1,
+      "order": 2,
+      "elapsedMs": 230.163125,
+      "peakRssBytes": 397312000,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 1,
+      "order": 3,
+      "elapsedMs": 135.948292,
+      "peakRssBytes": 114671616,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 1,
+      "order": 4,
+      "elapsedMs": 257.464792,
+      "peakRssBytes": 384532480,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 1,
+      "order": 5,
+      "elapsedMs": 137.025541,
+      "peakRssBytes": 114622464,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 1,
+      "order": 6,
+      "elapsedMs": 294.965458,
+      "peakRssBytes": 88817664,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 1,
+      "order": 7,
+      "elapsedMs": 115.799083,
+      "peakRssBytes": 48185344,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 1,
+      "order": 8,
+      "elapsedMs": 73.10425,
+      "peakRssBytes": 124878848,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 1,
+      "order": 9,
+      "elapsedMs": 59.377833,
+      "peakRssBytes": 79904768,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 1,
+      "order": 10,
+      "elapsedMs": 20.964667,
+      "peakRssBytes": 28049408,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 1,
+      "order": 11,
+      "elapsedMs": 475.19975,
+      "peakRssBytes": 427900928,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 2,
+      "order": 0,
+      "elapsedMs": 136.438459,
+      "peakRssBytes": 114458624,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 2,
+      "order": 1,
+      "elapsedMs": 293.194166,
+      "peakRssBytes": 89292800,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 2,
+      "order": 2,
+      "elapsedMs": 136.06825,
+      "peakRssBytes": 114540544,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 2,
+      "order": 3,
+      "elapsedMs": 59.056583,
+      "peakRssBytes": 80265216,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 2,
+      "order": 4,
+      "elapsedMs": 65.10375,
+      "peakRssBytes": 117653504,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 2,
+      "order": 5,
+      "elapsedMs": 20.4585,
+      "peakRssBytes": 28114944,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 2,
+      "order": 6,
+      "elapsedMs": 473.393375,
+      "peakRssBytes": 427442176,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 2,
+      "order": 7,
+      "elapsedMs": 256.719125,
+      "peakRssBytes": 383991808,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 2,
+      "order": 8,
+      "elapsedMs": 226.742917,
+      "peakRssBytes": 383975424,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 2,
+      "order": 9,
+      "elapsedMs": 116.017041,
+      "peakRssBytes": 48185344,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 2,
+      "order": 10,
+      "elapsedMs": 20.842625,
+      "peakRssBytes": 28590080,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 2,
+      "order": 11,
+      "elapsedMs": 72.925959,
+      "peakRssBytes": 126631936,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 3,
+      "order": 0,
+      "elapsedMs": 73.48425,
+      "peakRssBytes": 126550016,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 3,
+      "order": 1,
+      "elapsedMs": 20.833792,
+      "peakRssBytes": 28213248,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 3,
+      "order": 2,
+      "elapsedMs": 57.922166,
+      "peakRssBytes": 79855616,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 3,
+      "order": 3,
+      "elapsedMs": 137.522209,
+      "peakRssBytes": 114524160,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 3,
+      "order": 4,
+      "elapsedMs": 134.733375,
+      "peakRssBytes": 114524160,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 3,
+      "order": 5,
+      "elapsedMs": 471.854417,
+      "peakRssBytes": 427720704,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 3,
+      "order": 6,
+      "elapsedMs": 115.717,
+      "peakRssBytes": 48349184,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 3,
+      "order": 7,
+      "elapsedMs": 20.566292,
+      "peakRssBytes": 28262400,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 3,
+      "order": 8,
+      "elapsedMs": 64.756125,
+      "peakRssBytes": 117932032,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 3,
+      "order": 9,
+      "elapsedMs": 294.761833,
+      "peakRssBytes": 89309184,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 3,
+      "order": 10,
+      "elapsedMs": 223.255375,
+      "peakRssBytes": 385089536,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 3,
+      "order": 11,
+      "elapsedMs": 257.910791,
+      "peakRssBytes": 384581632,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 4,
+      "order": 0,
+      "elapsedMs": 255.547625,
+      "peakRssBytes": 384548864,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 4,
+      "order": 1,
+      "elapsedMs": 64.237,
+      "peakRssBytes": 117538816,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 4,
+      "order": 2,
+      "elapsedMs": 58.460166,
+      "peakRssBytes": 79773696,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 4,
+      "order": 3,
+      "elapsedMs": 116.505375,
+      "peakRssBytes": 48529408,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 4,
+      "order": 4,
+      "elapsedMs": 20.781416,
+      "peakRssBytes": 28311552,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 4,
+      "order": 5,
+      "elapsedMs": 136.524041,
+      "peakRssBytes": 114556928,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 4,
+      "order": 6,
+      "elapsedMs": 472.166917,
+      "peakRssBytes": 427786240,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 4,
+      "order": 7,
+      "elapsedMs": 243.105542,
+      "peakRssBytes": 387661824,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 4,
+      "order": 8,
+      "elapsedMs": 20.867834,
+      "peakRssBytes": 28295168,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 4,
+      "order": 9,
+      "elapsedMs": 73.906917,
+      "peakRssBytes": 126582784,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 4,
+      "order": 10,
+      "elapsedMs": 135.439584,
+      "peakRssBytes": 114491392,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 4,
+      "order": 11,
+      "elapsedMs": 293.772083,
+      "peakRssBytes": 89227264,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 5,
+      "order": 0,
+      "elapsedMs": 135.008,
+      "peakRssBytes": 114556928,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 5,
+      "order": 1,
+      "elapsedMs": 20.464708,
+      "peakRssBytes": 28377088,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 5,
+      "order": 2,
+      "elapsedMs": 225.60875,
+      "peakRssBytes": 384958464,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 5,
+      "order": 3,
+      "elapsedMs": 116.561583,
+      "peakRssBytes": 48594944,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 5,
+      "order": 4,
+      "elapsedMs": 136.396708,
+      "peakRssBytes": 114540544,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 5,
+      "order": 5,
+      "elapsedMs": 58.214125,
+      "peakRssBytes": 79855616,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 5,
+      "order": 6,
+      "elapsedMs": 64.468,
+      "peakRssBytes": 117669888,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 5,
+      "order": 7,
+      "elapsedMs": 295.085375,
+      "peakRssBytes": 89227264,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 5,
+      "order": 8,
+      "elapsedMs": 20.61225,
+      "peakRssBytes": 28229632,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 5,
+      "order": 9,
+      "elapsedMs": 259.521042,
+      "peakRssBytes": 398032896,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 5,
+      "order": 10,
+      "elapsedMs": 71.995834,
+      "peakRssBytes": 126517248,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 5,
+      "order": 11,
+      "elapsedMs": 474.495958,
+      "peakRssBytes": 427311104,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 6,
+      "order": 0,
+      "elapsedMs": 136.887875,
+      "peakRssBytes": 114524160,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 6,
+      "order": 1,
+      "elapsedMs": 134.290417,
+      "peakRssBytes": 114786304,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 6,
+      "order": 2,
+      "elapsedMs": 228.392625,
+      "peakRssBytes": 397082624,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 6,
+      "order": 3,
+      "elapsedMs": 62.801042,
+      "peakRssBytes": 117915648,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 6,
+      "order": 4,
+      "elapsedMs": 58.593292,
+      "peakRssBytes": 80429056,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 6,
+      "order": 5,
+      "elapsedMs": 73.345542,
+      "peakRssBytes": 126337024,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 6,
+      "order": 6,
+      "elapsedMs": 116.62075,
+      "peakRssBytes": 48168960,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 6,
+      "order": 7,
+      "elapsedMs": 20.586375,
+      "peakRssBytes": 28213248,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 6,
+      "order": 8,
+      "elapsedMs": 20.848625,
+      "peakRssBytes": 28098560,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 6,
+      "order": 9,
+      "elapsedMs": 258.30575,
+      "peakRssBytes": 399032320,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 6,
+      "order": 10,
+      "elapsedMs": 294.462917,
+      "peakRssBytes": 89145344,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 6,
+      "order": 11,
+      "elapsedMs": 473.029083,
+      "peakRssBytes": 427737088,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 7,
+      "order": 0,
+      "elapsedMs": 65.2985,
+      "peakRssBytes": 117620736,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 7,
+      "order": 1,
+      "elapsedMs": 20.843041,
+      "peakRssBytes": 28213248,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 7,
+      "order": 2,
+      "elapsedMs": 72.51125,
+      "peakRssBytes": 126861312,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 7,
+      "order": 3,
+      "elapsedMs": 244.188042,
+      "peakRssBytes": 387645440,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 7,
+      "order": 4,
+      "elapsedMs": 58.20025,
+      "peakRssBytes": 79806464,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 7,
+      "order": 5,
+      "elapsedMs": 136.366334,
+      "peakRssBytes": 114704384,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 7,
+      "order": 6,
+      "elapsedMs": 293.89325,
+      "peakRssBytes": 89276416,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 7,
+      "order": 7,
+      "elapsedMs": 115.852542,
+      "peakRssBytes": 48414720,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 7,
+      "order": 8,
+      "elapsedMs": 257.483041,
+      "peakRssBytes": 399294464,
+      "reportBytes": 505345,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 7,
+      "order": 9,
+      "elapsedMs": 134.676958,
+      "peakRssBytes": 114606080,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 7,
+      "order": 10,
+      "elapsedMs": 473.575875,
+      "peakRssBytes": 427786240,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 7,
+      "order": 11,
+      "elapsedMs": 20.519208,
+      "peakRssBytes": 28033024,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 8,
+      "order": 0,
+      "elapsedMs": 20.410625,
+      "peakRssBytes": 28327936,
+      "reportBytes": 134709,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "json",
+      "round": 8,
+      "order": 1,
+      "elapsedMs": 20.335417,
+      "peakRssBytes": 28098560,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "json",
+      "round": 8,
+      "order": 2,
+      "elapsedMs": 135.544417,
+      "peakRssBytes": 114638848,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "before",
+      "mode": "json",
+      "round": 8,
+      "order": 3,
+      "elapsedMs": 470.937291,
+      "peakRssBytes": 427819008,
+      "reportBytes": 774898,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "inspect",
+      "round": 8,
+      "order": 4,
+      "elapsedMs": 293.587792,
+      "peakRssBytes": 89063424,
+      "reportBytes": 2794444,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "before",
+      "mode": "json",
+      "round": 8,
+      "order": 5,
+      "elapsedMs": 57.887375,
+      "peakRssBytes": 79888384,
+      "reportBytes": 207619,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 8,
+      "order": 6,
+      "elapsedMs": 73.591333,
+      "peakRssBytes": 126926848,
+      "reportBytes": 189907,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "after",
+      "mode": "treemap",
+      "round": 8,
+      "order": 7,
+      "elapsedMs": 135.647709,
+      "peakRssBytes": 114720768,
+      "reportBytes": 472351,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "after",
+      "mode": "inspect",
+      "round": 8,
+      "order": 8,
+      "elapsedMs": 116.04725,
+      "peakRssBytes": 48381952,
+      "reportBytes": 2835684,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-measured",
+      "tool": "sme",
+      "mode": "json",
+      "round": 8,
+      "order": 9,
+      "elapsedMs": 63.397209,
+      "peakRssBytes": 117637120,
+      "reportBytes": 92548,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "json",
+      "round": 8,
+      "order": 10,
+      "elapsedMs": 242.134792,
+      "peakRssBytes": 386105344,
+      "reportBytes": 332858,
+      "exitCode": 0
+    },
+    {
+      "dataset": "blog-mapped",
+      "tool": "sme",
+      "mode": "treemap",
+      "round": 8,
+      "order": 11,
+      "elapsedMs": 259.019667,
+      "peakRssBytes": 398835712,
+      "reportBytes": 505345,
+      "exitCode": 0
+    }
+  ],
+  "sourceFilesSha256": {
+    "Cargo.lock": "341459452c4cf111b2c6de81c986ea6ea3a8347932a9ed31e81491274414a29d",
+    "Cargo.toml": "d3622088e5d280992dbec80e667957f1214d116fd116a0f3266e95a27ac4937c",
+    "src/attribution.rs": "8c31e51ceea0ffbfd9d3be28c527d8ced842a55bc881f56dfceeb944ca1c0608",
+    "src/ci.rs": "282d219853d824c4b02cebfd47ad491bb037cdb63e348b9a11ad74b880fb7b46",
+    "src/coverage.rs": "0cc09d95f9fff54f3f9715a2e1fc08155fc60c88baaa7e44c32988603aa272b8",
+    "src/input.rs": "2d990c84b49ae2648275fa1b1e621f3d8aa6d6bec6d0054143226ca1cb447198",
+    "src/lib.rs": "9afb83da767caf2aecd3819e7c46fcaa326a9c245f20477f3c778d1e04d16c90",
+    "src/main.rs": "931c14e0a5a2db922240d7a5bb1f0ab2d4021ea6470af96a14e4231b122e9e09",
+    "src/maps.rs": "0fd005a021455f2b91bf153b6cbaa088b75dc26d39a37eced434166ee503c164",
+    "src/metadata.rs": "53d7fced6876c6c312be2413f8a9b1af0d8d53586488241c4287036968d458bd",
+    "src/report.html": "00ec9c769e06a64e2127e8b97df195535938bdc4ac2c52567fbff8f16015cc10",
+    "src/report.rs": "674c69d47ca3a7f9fbe4d2eaf0e4708ace4b81e845620d0143039883b7363fbd",
+    "src/selection.rs": "6f80601c122d0adda491f0bf95cc44d6491e09c98d2f56fca7421d99aee87409",
+    "src/text.rs": "f682d26978995d5a5ccd326c58cbc37fdb45403b85956fd1e14a3da33f8ef605",
+    "src/treemap.html": "b2a874d0973e873d456af38a1c9f5965c3ddf048060ec4f49b1b3b01b313d344"
+  },
+  "inputManifestSha256": {
+    "blog-mapped": "7d72162f25801fdfe9545d1dc1e3e237a9bce68b1e6ce943557b6c012af58c86",
+    "blog-measured": "06dee2c145fd9a12ce3d23169a32132608169fd25bfed8f5b11728a59b54f1db"
+  }
+}

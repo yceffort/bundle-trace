@@ -1,0 +1,143 @@
+{
+  "method": "One warmup + nine randomized serial process pairs. Same release profile and full output. Only source_indices/source_counts key lookup changed; no instrumentation. Entire static JSON output compared byte for byte after every pair. This input-specific check does not replace the full correctness suite.",
+  "commit": "537b08500d0a0df2f543ebb63460da4ff441d15f",
+  "binarySha256": {
+    "production": "445b8a9a179b2193199c5c09610fcb720e3e2c1535bfad3e3b1dfc7692c939a0",
+    "borrowed_lookup": "42eee6385ece5263a6bb5fcc1869a834ab97b2dc3fd57fac20c1acfcb32d390a"
+  },
+  "outputsByteIdentical": true,
+  "summary": [
+    {
+      "variant": "production",
+      "medianWallMs": 485.291917,
+      "medianPeakRssBytes": 427786240
+    },
+    {
+      "variant": "borrowed_lookup",
+      "medianWallMs": 448.031667,
+      "medianPeakRssBytes": 426917888
+    }
+  ],
+  "samples": [
+    {
+      "round": -1,
+      "variant": "production",
+      "wallMs": 496.741291,
+      "peakRssBytes": 427786240
+    },
+    {
+      "round": -1,
+      "variant": "borrowed_lookup",
+      "wallMs": 885.980791,
+      "peakRssBytes": 429998080
+    },
+    {
+      "round": 0,
+      "variant": "borrowed_lookup",
+      "wallMs": 448.031667,
+      "peakRssBytes": 395018240
+    },
+    {
+      "round": 0,
+      "variant": "production",
+      "wallMs": 487.762333,
+      "peakRssBytes": 427851776
+    },
+    {
+      "round": 1,
+      "variant": "production",
+      "wallMs": 483.267792,
+      "peakRssBytes": 427737088
+    },
+    {
+      "round": 1,
+      "variant": "borrowed_lookup",
+      "wallMs": 447.736375,
+      "peakRssBytes": 427409408
+    },
+    {
+      "round": 2,
+      "variant": "production",
+      "wallMs": 485.664208,
+      "peakRssBytes": 427786240
+    },
+    {
+      "round": 2,
+      "variant": "borrowed_lookup",
+      "wallMs": 450.933708,
+      "peakRssBytes": 426917888
+    },
+    {
+      "round": 3,
+      "variant": "borrowed_lookup",
+      "wallMs": 447.689916,
+      "peakRssBytes": 426901504
+    },
+    {
+      "round": 3,
+      "variant": "production",
+      "wallMs": 484.496833,
+      "peakRssBytes": 427704320
+    },
+    {
+      "round": 4,
+      "variant": "production",
+      "wallMs": 487.220542,
+      "peakRssBytes": 427507712
+    },
+    {
+      "round": 4,
+      "variant": "borrowed_lookup",
+      "wallMs": 445.268791,
+      "peakRssBytes": 427196416
+    },
+    {
+      "round": 5,
+      "variant": "production",
+      "wallMs": 484.524459,
+      "peakRssBytes": 427819008
+    },
+    {
+      "round": 5,
+      "variant": "borrowed_lookup",
+      "wallMs": 448.279,
+      "peakRssBytes": 426917888
+    },
+    {
+      "round": 6,
+      "variant": "borrowed_lookup",
+      "wallMs": 449.631833,
+      "peakRssBytes": 426901504
+    },
+    {
+      "round": 6,
+      "variant": "production",
+      "wallMs": 485.291917,
+      "peakRssBytes": 427786240
+    },
+    {
+      "round": 7,
+      "variant": "borrowed_lookup",
+      "wallMs": 448.374166,
+      "peakRssBytes": 426901504
+    },
+    {
+      "round": 7,
+      "variant": "production",
+      "wallMs": 484.680458,
+      "peakRssBytes": 427704320
+    },
+    {
+      "round": 8,
+      "variant": "borrowed_lookup",
+      "wallMs": 446.658833,
+      "peakRssBytes": 427212800
+    },
+    {
+      "round": 8,
+      "variant": "production",
+      "wallMs": 488.045167,
+      "peakRssBytes": 427786240
+    }
+  ]
+}

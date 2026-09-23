@@ -224,6 +224,286 @@ fn multiple_scenarios_union_without_double_counting() {
 }
 
 #[test]
+fn scenario_breakdown_uses_range_differences_and_preserves_missing_recordings() {
+    let fixture = Fixture::new();
+    let source = "한🔥xy";
+    fixture.write("app.js", source);
+    fixture.write(
+        "app.js.map",
+        r#"{"version":3,"sources":["src/app.ts"],"names":[],"mappings":"AAAA"}"#,
+    );
+    fixture.write("lazy.js", "later");
+    fixture.write("absent.js", "never");
+    let initial = fixture.coverage(
+        "initial",
+        source,
+        json!([{"startOffset":0,"endOffset":3,"count":1}]),
+    );
+    let interaction = fixture.write("interaction", &json!({"schemaVersion":1,"scenario":"interaction","scripts":[
+        {"path":"app.js","sha256":sha256(source.as_bytes()),"sourceMapSha256":sha256(&fs::read(fixture.0.join("app.js.map")).unwrap()),"functions":[{"isBlockCoverage":true,"ranges":[{"startOffset":1,"endOffset":5,"count":1}]}]},
+        {"path":"lazy.js","sha256":sha256(b"later"),"sourceMapSha256":null,"functions":[{"isBlockCoverage":true,"ranges":[{"startOffset":0,"endOffset":5,"count":1}]}]}
+    ]}).to_string());
+    let mut options = bundle_trace::AnalyzeOptions {
+        initial_scenario: Some("initial".into()),
+        ..Default::default()
+    };
+    for details in [true, false] {
+        options.details = details;
+        let report = bundle_trace::analyze_with_options(
+            &fixture.0,
+            &[initial.clone(), interaction.clone(), interaction.clone()],
+            &options,
+        )
+        .unwrap();
+        assert_eq!(report.scenarios, ["initial", "interaction"]);
+        assert_eq!(report.totals.bytes, 19);
+        assert_eq!(report.totals.observed_bytes, 14);
+        assert_eq!(report.totals.unmeasured_bytes, 5);
+        let initial = &report.scenario_reports[0];
+        let later = &report.scenario_reports[1];
+        assert_eq!(
+            (
+                initial.totals.observed_bytes,
+                initial.totals.unobserved_bytes,
+                initial.totals.unmeasured_bytes
+            ),
+            (7, 2, 10)
+        );
+        assert_eq!(
+            (
+                later.totals.observed_bytes,
+                later.totals.unobserved_bytes,
+                later.totals.unmeasured_bytes
+            ),
+            (11, 3, 5)
+        );
+        assert_eq!(later.interaction_candidates[0].source, "src/app.ts");
+        assert_eq!(later.interaction_candidates[0].interaction_only_bytes, 2);
+        assert_eq!(
+            later.interaction_candidates[0].initial_unmeasured_observed_bytes,
+            0
+        );
+        assert_eq!(
+            later.interaction_candidates[1].initial_unmeasured_observed_bytes,
+            5
+        );
+        for scenario in &report.scenario_reports {
+            assert_eq!(
+                scenario.totals.bytes,
+                scenario.totals.observed_bytes
+                    + scenario.totals.unobserved_bytes
+                    + scenario.totals.unmeasured_bytes
+            );
+            assert_eq!(
+                scenario
+                    .sources
+                    .iter()
+                    .map(|s| s.counts.bytes)
+                    .sum::<usize>(),
+                report.totals.bytes
+            );
+            assert_eq!(
+                scenario
+                    .packages
+                    .iter()
+                    .map(|s| s.counts.observed_bytes)
+                    .sum::<usize>(),
+                scenario.totals.observed_bytes
+            );
+            assert_eq!(
+                scenario
+                    .bundles
+                    .iter()
+                    .flat_map(|s| &s.sources)
+                    .map(|s| s.counts.observed_bytes)
+                    .sum::<usize>(),
+                scenario.totals.observed_bytes
+            );
+        }
+    }
+    options.initial_scenario = Some("missing".into());
+    assert!(
+        bundle_trace::analyze_with_options(&fixture.0, &[initial, interaction], &options)
+            .unwrap_err()
+            .to_string()
+            .contains("unknown initial scenario")
+    );
+}
+
+#[test]
+fn baseline_compares_normalized_sources_additions_removals_and_scenarios() {
+    let before = Fixture::new();
+    let after = Fixture::new();
+    for (fixture, path, bytes, sources) in [
+        (
+            &before,
+            "old.js",
+            "12345678",
+            vec!["src/keep.js", "node_modules/removed/index.js"],
+        ),
+        (
+            &after,
+            "chunks/new.js",
+            "1234567890",
+            vec!["../src/./keep.js", "../node_modules/added/index.js"],
+        ),
+    ] {
+        fs::create_dir_all(fixture.0.join("chunks")).unwrap();
+        fixture.write(path, bytes);
+        fixture.write(&format!("{path}.map"), &json!({"version":3,"sources":sources,"names":[],"mappings": if fixture.0 == before.0 {"AAAA,ICAA"} else {"AAAA,MCAA"}}).to_string());
+        fixture.write(
+            "initial.json",
+            &json!([{"url":path,"text":bytes,"ranges":[]}]).to_string(),
+        );
+    }
+    let old = analyze(&before.0, &[before.0.join("initial.json")]).unwrap();
+    let new = analyze(&after.0, &[after.0.join("initial.json")]).unwrap();
+    let data = serde_json::to_vec(&old).unwrap();
+    let comparison = bundle_trace::baseline::compare(&new, &data).unwrap();
+    assert_eq!(comparison.totals.delta.bytes, 2);
+    let row = |name: &str| comparison.sources.iter().find(|r| r.name == name).unwrap();
+    assert_eq!(row("src/keep.js").delta.bytes, 2);
+    assert_eq!(row("node_modules/added/index.js").change, "added");
+    assert_eq!(row("node_modules/removed/index.js").delta.bytes, -4);
+    assert_eq!(
+        comparison
+            .packages
+            .iter()
+            .find(|r| r.name == "removed")
+            .unwrap()
+            .change,
+        "removed"
+    );
+    assert_eq!(comparison.scenarios[0].totals.delta.unobserved_bytes, 2);
+    assert_eq!(
+        comparison
+            .sources
+            .iter()
+            .map(|r| r.delta.bytes)
+            .sum::<i128>(),
+        comparison.totals.delta.bytes
+    );
+    assert!(
+        bundle_trace::baseline::compare(&new, br#"{"schemaVersion":2}"#)
+            .unwrap_err()
+            .to_string()
+            .contains("regenerate")
+    );
+    let mut invalid = serde_json::to_value(&old).unwrap();
+    let duplicate = invalid["sources"][0].clone();
+    invalid["sources"].as_array_mut().unwrap().push(duplicate);
+    assert!(
+        bundle_trace::baseline::compare(&new, &serde_json::to_vec(&invalid).unwrap())
+            .unwrap_err()
+            .to_string()
+            .contains("duplicate")
+    );
+    let mut different = serde_json::to_value(&old).unwrap();
+    different["scenarios"] = json!(["other"]);
+    different["scenarioReports"] = json!([]);
+    let comparison =
+        bundle_trace::baseline::compare(&new, &serde_json::to_vec(&different).unwrap()).unwrap();
+    assert!(comparison.scenarios.is_empty());
+    assert!(!comparison.warnings.is_empty());
+}
+
+#[test]
+fn baseline_growth_budget_writes_reports_and_exits_two() {
+    let fixture = Fixture::new();
+    fixture.write("app.js", "1234");
+    let report = analyze(&fixture.0, &[]).unwrap();
+    fixture.write("main.json", &serde_json::to_string(&report).unwrap());
+    fixture.write("app.js", "123456");
+    let run = |limit| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+            .current_dir(&fixture.0)
+            .args([
+                "--dir",
+                ".",
+                "--baseline",
+                "main.json",
+                "--max-added-bytes",
+                limit,
+                "--json",
+                "pr.json",
+                "--markdown",
+                "pr.md",
+                "--treemap",
+                "pr.html",
+            ])
+            .output()
+            .unwrap()
+    };
+    let output = run("1");
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value =
+        serde_json::from_slice(&fs::read(fixture.0.join("pr.json")).unwrap()).unwrap();
+    assert_eq!(report["baseline"]["totals"]["delta"]["bytes"], 2);
+    assert_eq!(report["budgetFailures"].as_array().unwrap().len(), 1);
+    assert!(fixture.0.join("pr.html").exists());
+    assert!(run("2").status.success());
+}
+
+#[test]
+fn initial_regression_budget_rejects_growth_and_missing_measurements() {
+    let fixture = Fixture::new();
+    fixture.write("app.js", "12345678");
+    let coverage = fixture.coverage(
+        "initial",
+        "12345678",
+        json!([{"startOffset":0,"endOffset":4,"count":1}]),
+    );
+    let before = analyze(&fixture.0, std::slice::from_ref(&coverage)).unwrap();
+    fixture.write("main.json", &serde_json::to_string(&before).unwrap());
+    fixture.coverage(
+        "initial",
+        "12345678",
+        json!([{"startOffset":0,"endOffset":2,"count":1}]),
+    );
+    let run = |limit| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+            .current_dir(&fixture.0)
+            .args([
+                "--dir",
+                ".",
+                "--coverage",
+                "initial",
+                "--initial-scenario",
+                "initial",
+                "--baseline",
+                "main.json",
+                "--max-added-unobserved-bytes",
+                limit,
+                "--json",
+                "pr.json",
+            ])
+            .output()
+            .unwrap()
+    };
+    let output = run("1");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("initial unobserved byte growth: +2"));
+    assert!(run("2").status.success());
+    fixture.write("unrecorded.js", "no evidence");
+    let output = run("1000");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("cannot check"));
+    let report: serde_json::Value =
+        serde_json::from_slice(&fs::read(fixture.0.join("pr.json")).unwrap()).unwrap();
+    assert!(
+        report["budgetFailures"][0]
+            .as_str()
+            .unwrap()
+            .contains("unmeasured")
+    );
+}
+
+#[test]
 fn mapping_does_not_claim_unmapped_lines_or_prefixes() {
     let source = "xxabcd\nwrapper\nz";
     let map = br#"{"version":3,"sources":["src/a.js"],"names":[],"mappings":"EAAA,E;"}"#;
@@ -419,7 +699,7 @@ fn coverage_missing_file_and_unsafe_path_fail() {
         analyze(&fixture.0, &[coverage])
             .unwrap_err()
             .to_string()
-            .contains("missing from --dir")
+            .contains("missing from analysis root")
     );
 }
 
@@ -596,6 +876,120 @@ fn inline_maps_and_explicit_external_maps() {
 }
 
 #[test]
+fn source_paths_merge_across_chunk_depths_and_keep_distinct_files() {
+    let fixture = Fixture::new();
+    fs::create_dir_all(fixture.0.join("dist/sub")).unwrap();
+    for (bundle, source) in [
+        ("dist/a.js", "../src/x.js"),
+        ("dist/sub/b.js", "../../src/./x.js"),
+        ("dist/sub/c.js", "src/x.js"),
+    ] {
+        fixture.write(bundle, "12345678");
+        fixture.write(
+            &format!("{bundle}.map"),
+            &json!({
+                "version":3, "sources":[source], "names":[], "mappings":"AAAA"
+            })
+            .to_string(),
+        );
+    }
+    for (root, expected) in [
+        (fixture.0.clone(), "src/x.js"),
+        (fixture.0.join("dist"), "../src/x.js"),
+    ] {
+        let report = analyze(&root, &[]).unwrap();
+        assert_eq!(report.sources.len(), 2);
+        assert_eq!(report.sources[0].source, expected);
+        assert_eq!(report.sources[0].counts.bytes, 16);
+        assert_eq!(report.sources[1].counts.bytes, 8);
+        assert!(bundle_trace::report::tsv(&report).contains(&format!("{expected}\t16\t")));
+        assert_eq!(report.bundles[0].sources[0].source, expected);
+        assert_eq!(report.bundles[1].sources[0].source, expected);
+    }
+}
+
+#[test]
+fn source_paths_use_map_location_source_root_and_inline_bundle_location() {
+    use base64::Engine;
+    let fixture = Fixture::new();
+    fs::create_dir_all(fixture.0.join("dist/sub")).unwrap();
+    fs::create_dir_all(fixture.0.join("maps")).unwrap();
+    let map = json!({"version":3,"sourceRoot":"../src","sources":["./x.js"],
+        "names":[],"mappings":"AAAA"})
+    .to_string();
+    fixture.write("dist/a.js", "12345678\n//# sourceMappingURL=../maps/a.map");
+    fixture.write("maps/a.map", &map);
+    fixture.write("dist/sub/b.js", "12345678");
+    let explicit = fixture.write("maps/b.map", &map);
+    let inline = base64::engine::general_purpose::STANDARD.encode(
+        json!({"version":3,"sources":["../../src/x.js"],"names":[],"mappings":"AAAA"}).to_string(),
+    );
+    fixture.write(
+        "dist/sub/c.js",
+        &format!("12345678\n//# sourceMappingURL=data:application/json;base64,{inline}"),
+    );
+    let mut options = bundle_trace::AnalyzeOptions::default();
+    options.maps.insert("dist/sub/b.js".into(), explicit);
+    let report = bundle_trace::analyze_with_options(&fixture.0, &[], &options).unwrap();
+    let row = report
+        .sources
+        .iter()
+        .find(|s| s.source == "src/x.js")
+        .unwrap();
+    assert_eq!(row.counts.bytes, 24);
+    assert_eq!(report.sources.len(), 2); // Original source and unmapped comments.
+    // An explicitly bound map outside --dir still resolves from its own directory.
+    options.maps = std::collections::BTreeMap::from([
+        ("a.js".into(), fixture.0.join("maps/a.map")),
+        ("sub/b.js".into(), fixture.0.join("maps/b.map")),
+    ]);
+    let report =
+        bundle_trace::analyze_with_options(&fixture.0.join("dist"), &[], &options).unwrap();
+    assert_eq!(
+        report
+            .sources
+            .iter()
+            .find(|s| s.source == "../src/x.js")
+            .unwrap()
+            .counts
+            .bytes,
+        24
+    );
+}
+
+#[test]
+fn source_paths_normalize_before_indexed_map_deduplication() {
+    let fixture = Fixture::new();
+    fixture.write("app.js", "12345678");
+    for prefix in ["webpack://app/", "webpack:///", "https://example.com/"] {
+        let section = |column, source: String, content| {
+            json!({
+                "offset":{"line":0,"column":column},
+                "map":{"version":3,"sources":[source],"sourcesContent":[content],"names":[],"mappings":"AAAA"}
+            })
+        };
+        let map = |content| {
+            json!({"version":3,"sections":[
+                section(0, format!("{prefix}./src/x.js"), "original"),
+                section(4, format!("{prefix}src/x.js"), content)
+            ]})
+            .to_string()
+        };
+        fixture.write("app.js.map", &map("original"));
+        let report = analyze(&fixture.0, &[]).unwrap();
+        assert_eq!(report.sources.len(), 1);
+        assert_eq!(report.bundles[0].sources.len(), 1);
+        assert_eq!(report.sources[0].source, format!("{prefix}src/x.js"));
+        assert_eq!(report.sources[0].counts.bytes, 8);
+        fixture.write("app.js.map", &map("conflict"));
+        assert!(
+            format!("{:#}", analyze(&fixture.0, &[]).unwrap_err())
+                .contains("conflicting sourcesContent")
+        );
+    }
+}
+
+#[test]
 fn url_mapping_is_explicit_and_rejects_traversal() {
     let fixture = Fixture::new();
     fixture.write("app.js", "abcd");
@@ -759,7 +1153,7 @@ fn filters_change_denominator_and_do_not_hide_missing_files() {
         bundle_trace::analyze_with_options(&fixture.0, &[coverage], &options)
             .unwrap_err()
             .to_string()
-            .contains("missing from --dir")
+            .contains("missing from analysis root")
     );
     options.exclude.push("**/*.js".into());
     assert!(bundle_trace::analyze_with_options(&fixture.0, &[], &options).is_err());
@@ -824,8 +1218,17 @@ fn budget_does_not_confuse_unmeasured_with_unobserved() {
         serde_json::from_str(r#"{"budgets":{"maxUnobservedBytes":0,"maxUnmeasuredBytes":0}}"#)
             .unwrap();
     let failures = config.budgets.check(&report);
-    assert_eq!(failures.len(), 1);
-    assert!(failures[0].contains("unmeasured"));
+    assert_eq!(failures.len(), 2);
+    assert!(
+        failures
+            .iter()
+            .any(|failure| failure.contains("cannot check"))
+    );
+    assert!(
+        failures
+            .iter()
+            .any(|failure| failure.starts_with("unmeasured"))
+    );
     assert!(
         serde_json::from_str::<bundle_trace::ci::Config>(r#"{"budgets":{"maxByte":4}}"#).is_err()
     );
@@ -860,4 +1263,470 @@ fn summary_json_and_detailed_json_have_identical_counts() {
         totals.push(report["totals"].clone());
     }
     assert_eq!(totals[0], totals[1]);
+}
+
+#[test]
+fn sparse_text_index_matches_every_utf8_and_utf16_boundary() {
+    // Compare against independently enumerated char boundaries, including dense
+    // Unicode, adjacent surrogate pairs, long ASCII stretches and all JS EOLs.
+    for source in [
+        String::new(),
+        "ascii\r\nnext\nlast\r".into(),
+        "é한🔥𝄞\u{2028}\u{2029}\r\nx".repeat(25),
+        format!("{}🔥{}한", "a".repeat(10000), "b".repeat(10000)),
+    ] {
+        let index = TextIndex::new(&source);
+        let mut boundaries = std::collections::BTreeMap::from([(0, 0)]);
+        let mut units = 0;
+        for (byte, ch) in source.char_indices() {
+            units += ch.len_utf16();
+            boundaries.insert(byte + ch.len_utf8(), units);
+        }
+        for byte in 0..=source.len() + 1 {
+            assert_eq!(index.utf16(byte).ok(), boundaries.get(&byte).copied());
+        }
+        let reverse: std::collections::BTreeMap<_, _> =
+            boundaries.into_iter().map(|(b, u)| (u, b)).collect();
+        for unit in 0..=units + 1 {
+            assert_eq!(index.byte(unit).ok(), reverse.get(&unit).copied());
+        }
+        assert_eq!(index.utf16_len(), units);
+    }
+}
+
+#[test]
+fn duplicate_mapping_positions_keep_the_last_source() {
+    let map = br#"{"version":3,"sources":["a.js","b.js"],"names":[],"mappings":"AAAA,ACAA"}"#;
+    let decoded = attribution::decode(map, &TextIndex::new("abcd"), 4).unwrap();
+    assert_eq!(decoded.segments.len(), 1);
+    assert_eq!(decoded.segments[0].source, "b.js");
+    assert_eq!(decoded.segments[0].end, 4);
+}
+
+#[test]
+fn cli_selects_files_globs_and_explicit_maps_and_exports_stdout() {
+    use std::process::Command;
+    let fixture = Fixture::new();
+    fixture.write("a.js", "abcd");
+    fixture.write("b.js", "xyz");
+    fixture.write("other.cjs", "ignored");
+    let run = |args: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+            .current_dir(&fixture.0)
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    let output = run(&["*.js", "--json", "-"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["totals"]["bytes"], 7);
+    assert_eq!(report["bundles"].as_array().unwrap().len(), 2);
+    let output = run(&["a.js", "a.js", "--tsv", "-"]);
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        "Source\tBytes\tObserved\tUnobserved\tUnmeasured\n[unmapped]\t4\t0\t0\t4\n"
+    );
+    fixture.write(
+        "custom.map",
+        r#"{"version":3,"sources":["src/a.ts"],"names":[],"mappings":"AAAA"}"#,
+    );
+    let output = run(&["a.js", "custom.map", "--json", "-"]);
+    assert!(output.status.success());
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["sources"][0]["source"], "src/a.ts");
+    assert!(!run(&["nothing*.js", "--json", "-"]).status.success());
+    assert!(run(&["--dir", ".", "a.js", "--json", "-"]).status.success());
+    assert!(!run(&["a.js", "--json", "-", "--tsv", "-"]).status.success());
+    assert!(!run(&["a.js", "b.js", "custom.map"]).status.success());
+    let default_path = fixture.write("bundle-trace.html", "IMPORTANT");
+    let output = run(&["a.js"]);
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter(|line| *line == "Wrote bundle-trace.html")
+            .count(),
+        1
+    );
+    assert!(
+        fs::read_to_string(&default_path)
+            .unwrap()
+            .contains("id=\"report-data\">")
+    );
+    for args in [
+        vec!["a.js", "--treemap", "bundle-trace.html"],
+        vec!["a.js", "--json", "-"],
+    ] {
+        let output = run(&args);
+        assert!(output.status.success());
+        assert!(!String::from_utf8_lossy(&output.stdout).contains("Wrote bundle-trace.html"));
+        assert!(!String::from_utf8_lossy(&output.stderr).contains("Wrote bundle-trace.html"));
+    }
+    fs::remove_file(&default_path).unwrap();
+    fs::create_dir(&default_path).unwrap();
+    let output = run(&["a.js"]);
+    assert!(!output.status.success());
+    assert!(!String::from_utf8_lossy(&output.stdout).contains("Wrote bundle-trace.html"));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("Wrote bundle-trace.html"));
+}
+
+#[test]
+fn cli_positional_coverage_uses_an_explicit_root_and_skips_unselected_siblings() {
+    use std::process::Command;
+    let fixture = Fixture::new();
+    fs::create_dir_all(fixture.0.join("dist/assets")).unwrap();
+    let source = ";".repeat(16);
+    fixture.write("dist/assets/app.js", &source);
+    fixture.write("dist/assets/lazy.js", &source);
+    fixture.write(
+        "coverage.json",
+        &json!([
+            {"url":"https://x/assets/app.js", "text":source, "ranges":[{"start":0,"end":5}]},
+            {"url":"https://x/assets/lazy.js", "text":source, "ranges":[]}
+        ])
+        .to_string(),
+    );
+    let run = |selection: &[&str], prefix: &str| {
+        let output = Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+            .current_dir(&fixture.0)
+            .args(selection)
+            .args([
+                "--coverage",
+                "coverage.json",
+                "--url-prefix",
+                prefix,
+                "--json",
+                "-",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()
+    };
+    let scanned = run(&["--dir", "dist"], "https://x/");
+    let selected = run(&["dist/assets/*.js", "--dir", "dist"], "https://x/");
+    assert_eq!(scanned, selected);
+    assert_eq!(selected["totals"]["observedBytes"], 5);
+    assert_eq!(selected["totals"]["unobservedBytes"], 27);
+    for (args, prefix, path, sibling) in [
+        (
+            vec!["dist/assets/app.js", "--dir", "dist"],
+            "https://x/",
+            "assets/app.js",
+            "assets/lazy.js",
+        ),
+        (
+            vec!["dist/assets/app.js"],
+            "https://x/assets/",
+            "app.js",
+            "lazy.js",
+        ),
+    ] {
+        let report = run(&args, prefix);
+        assert_eq!(report["bundles"].as_array().unwrap().len(), 1);
+        assert_eq!(report["bundles"][0]["path"], path);
+        assert_eq!(report["totals"]["bytes"], 16);
+        assert_eq!(report["totals"]["observedBytes"], 5);
+        assert_eq!(report["totals"]["unobservedBytes"], 11);
+        assert_eq!(report["totals"]["unmeasuredBytes"], 0);
+        assert!(report["warnings"].as_array().unwrap().iter().any(|w| {
+            let w = w.as_str().unwrap();
+            w.contains("skipped coverage for unselected file") && w.contains(sibling)
+        }));
+    }
+}
+
+#[test]
+fn cli_positional_filters_and_budgets_stay_relative_to_explicit_root() {
+    use std::process::Command;
+    let fixture = Fixture::new();
+    fs::create_dir_all(fixture.0.join("dist/assets")).unwrap();
+    fixture.write("dist/assets/app.js", "abcd");
+    fixture.write("dist/assets/lazy.js", "later");
+    fixture.write(
+        "ci.json",
+        r#"{"include":["assets/*.js"],"exclude":["assets/lazy.js"],"budgets":{"maxBytes":4}}"#,
+    );
+    let run = |selection: &[&str], budget: &str| {
+        Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+            .current_dir(&fixture.0)
+            .args(selection)
+            .args([
+                "--dir",
+                "dist",
+                "--config",
+                "ci.json",
+                "--max-bytes",
+                budget,
+                "--json",
+                "-",
+            ])
+            .output()
+            .unwrap()
+    };
+    let scanned = run(&[], "4");
+    let selected = run(&["dist/assets/*.js"], "4");
+    assert!(scanned.status.success());
+    assert!(
+        selected.status.success(),
+        "{}",
+        String::from_utf8_lossy(&selected.stderr)
+    );
+    assert_eq!(scanned.stdout, selected.stdout);
+    let report: serde_json::Value = serde_json::from_slice(&selected.stdout).unwrap();
+    assert_eq!(report["bundles"][0]["path"], "assets/app.js");
+    assert_eq!(report["excludedBundles"], json!(["assets/lazy.js"]));
+    assert_eq!(report["totals"]["bytes"], 4);
+    let output = run(&["dist/assets/*.js"], "3");
+    assert_eq!(output.status.code(), Some(2));
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        report["budgetFailures"],
+        json!(["generated bytes: 4 exceeds budget 3"])
+    );
+}
+
+#[test]
+fn selection_resolves_globs_deduplicates_files_and_binds_maps_under_the_root() {
+    let fixture = Fixture::new();
+    fs::create_dir_all(fixture.0.join("dist/assets")).unwrap();
+    fixture.write("dist/assets/app.js", "abcd");
+    fixture.write("dist/assets/lazy.js", "later");
+    let map = r#"{"version":3,"sources":["src/a.ts"],"names":[],"mappings":"AAAA"}"#;
+    fixture.write("dist/assets/app.js.map", map);
+    fixture.write("dist/assets/lazy.js.map", map);
+    let patterns = vec![
+        fixture
+            .0
+            .join("dist/assets/*.js*")
+            .to_string_lossy()
+            .into_owned(),
+        fixture
+            .0
+            .join("dist/../dist/assets/app.js")
+            .to_string_lossy()
+            .into_owned(),
+    ];
+    let dist = fs::canonicalize(fixture.0.join("dist")).unwrap();
+    for explicit in [None, Some(dist.as_path())] {
+        let selection = bundle_trace::selection::resolve(&patterns, explicit).unwrap();
+        let prefix = if explicit.is_some() { "assets/" } else { "" };
+        assert_eq!(
+            selection.root,
+            if explicit.is_some() {
+                dist.clone()
+            } else {
+                dist.join("assets")
+            }
+        );
+        let expected = [format!("{prefix}app.js"), format!("{prefix}lazy.js")];
+        assert_eq!(
+            selection.files,
+            expected.iter().map(PathBuf::from).collect::<Vec<_>>()
+        );
+        assert_eq!(selection.maps.keys().cloned().collect::<Vec<_>>(), expected);
+        let options = bundle_trace::AnalyzeOptions {
+            files: Some(selection.files),
+            maps: selection.maps,
+            ..Default::default()
+        };
+        let report = bundle_trace::analyze_with_options(&selection.root, &[], &options).unwrap();
+        assert_eq!(report.totals.bytes, 9);
+        assert_eq!(report.bundles[0].mapped_bytes, 4);
+        assert_eq!(report.bundles[1].mapped_bytes, 5);
+    }
+}
+
+#[test]
+fn selection_allows_external_maps_but_rejects_scripts_outside_explicit_root() {
+    let fixture = Fixture::new();
+    fs::create_dir_all(fixture.0.join("dist/assets")).unwrap();
+    let script = fixture.write("dist/assets/app[entry].js", "abcd");
+    let map = fixture.write(
+        "external.map",
+        r#"{"version":3,"sources":["a.ts"],"names":[],"mappings":"AAAA"}"#,
+    );
+    let root = fixture.0.join("dist");
+    let patterns = vec![
+        script.to_string_lossy().into_owned(),
+        map.to_string_lossy().into_owned(),
+    ];
+    let selection = bundle_trace::selection::resolve(&patterns, Some(&root)).unwrap();
+    assert_eq!(selection.files, vec![PathBuf::from("assets/app[entry].js")]);
+    assert_eq!(
+        selection.maps["assets/app[entry].js"],
+        fs::canonicalize(map).unwrap()
+    );
+    let outside = fixture.write("outside.js", "outside");
+    let error =
+        bundle_trace::selection::resolve(&[outside.to_string_lossy().into_owned()], Some(&root))
+            .unwrap_err();
+    assert!(error.to_string().contains("outside analysis root"));
+    let error = bundle_trace::selection::resolve(&patterns, Some(&script)).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("analysis root is not a directory")
+    );
+    assert!(bundle_trace::selection::resolve(&[], Some(&root)).is_err());
+    assert!(
+        bundle_trace::selection::resolve(
+            &[fixture.0.join("missing*.js").to_string_lossy().into_owned()],
+            Some(&root)
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn selected_coverage_preserves_missing_file_and_verification_errors() {
+    let fixture = Fixture::new();
+    fixture.write("app.js", "abcd");
+    fixture.write("lazy.js", "later");
+    let options = bundle_trace::AnalyzeOptions {
+        files: Some(vec![PathBuf::from("app.js")]),
+        ..Default::default()
+    };
+    let mut envelope = json!({"schemaVersion":1,"scenario":"selected","scripts":[
+        {"path":"app.js","sha256":sha256(b"abcd"),"sourceMapSha256":null,"functions":[
+            {"isBlockCoverage":true,"ranges":[{"startOffset":0,"endOffset":4,"count":1}]}
+        ]},
+        {"path":"lazy.js","sha256":"not-verified-when-unselected","sourceMapSha256":null,"functions":[]}
+    ]});
+    let coverage = fixture.write("coverage.json", &envelope.to_string());
+    let analyze_selected = || {
+        bundle_trace::analyze_with_options(&fixture.0, std::slice::from_ref(&coverage), &options)
+    };
+    let report = analyze_selected().unwrap();
+    assert_eq!(report.totals.observed_bytes, 4);
+    assert!(
+        report
+            .warnings
+            .iter()
+            .any(|w| w == "skipped coverage for unselected file: lazy.js")
+    );
+
+    envelope["scripts"][0]["sha256"] = json!(sha256(b"stale"));
+    fixture.write("coverage.json", &envelope.to_string());
+    assert!(
+        analyze_selected()
+            .unwrap_err()
+            .to_string()
+            .contains("coverage SHA-256 mismatch")
+    );
+    envelope["scripts"][0]["sha256"] = json!(sha256(b"abcd"));
+    envelope["scripts"][0]["functions"][0]["ranges"][0]["endOffset"] = json!(100);
+    fixture.write("coverage.json", &envelope.to_string());
+    assert!(
+        analyze_selected()
+            .unwrap_err()
+            .to_string()
+            .contains("normalize coverage for app.js")
+    );
+    envelope["scripts"][0]["functions"][0]["ranges"][0]["endOffset"] = json!(4);
+    fixture.write("coverage.json", &envelope.to_string());
+    fs::remove_file(fixture.0.join("lazy.js")).unwrap();
+    let error = analyze_selected().unwrap_err().to_string();
+    assert!(error.contains("missing from analysis root"));
+    assert!(error.contains("lazy.js"));
+}
+
+#[test]
+fn positional_coverage_with_wrong_prefix_reports_the_analysis_root() {
+    use std::process::Command;
+    let fixture = Fixture::new();
+    fs::create_dir_all(fixture.0.join("dist/assets")).unwrap();
+    fixture.write("dist/assets/app.js", "abcd");
+    fixture.write(
+        "coverage.json",
+        &json!([
+            {"url":"https://x/assets/app.js","text":"abcd","ranges":[{"start":0,"end":4}]}
+        ])
+        .to_string(),
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+        .current_dir(&fixture.0)
+        .args([
+            "dist/assets/*.js",
+            "--coverage",
+            "coverage.json",
+            "--url-prefix",
+            "https://x/",
+            "--json",
+            "-",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("missing from analysis root"));
+    assert!(
+        stderr.contains(
+            fs::canonicalize(fixture.0.join("dist/assets"))
+                .unwrap()
+                .to_str()
+                .unwrap()
+        )
+    );
+    assert!(stderr.contains("assets/app.js"));
+    assert!(stderr.contains("check --dir, --url-prefix, or --script-map"));
+}
+
+#[cfg(unix)]
+#[test]
+fn explicit_selection_rejects_symlinks_outside_the_analysis_root() {
+    let fixture = Fixture::new();
+    let root = fixture.0.join("dist");
+    fs::create_dir(&root).unwrap();
+    let outside = fixture.write("outside.js", "outside");
+    let link = root.join("linked.js");
+    std::os::unix::fs::symlink(outside, &link).unwrap();
+    let error =
+        bundle_trace::selection::resolve(&[link.to_string_lossy().into_owned()], Some(&root))
+            .unwrap_err();
+    assert!(error.to_string().contains("outside analysis root"));
+    let options = bundle_trace::AnalyzeOptions {
+        files: Some(vec![PathBuf::from("linked.js")]),
+        ..Default::default()
+    };
+    let error = bundle_trace::analyze_with_options(&root, &[], &options).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("input file escapes analysis root")
+    );
+}
+
+#[test]
+fn compact_treemap_has_no_code_payload_and_escapes_source_paths() {
+    let fixture = Fixture::new();
+    fixture.write("app.js", "const secret = 42;");
+    let source = "</script><script>globalThis.injected=true</script>";
+    fixture.write("app.js.map", &json!({"version":3,"sources":[source],"sourcesContent":["private original content"],"names":[],"mappings":"AAAA"}).to_string());
+    let report = analyze(&fixture.0, &[]).unwrap();
+    let html = bundle_trace::report::treemap(&report).unwrap();
+    assert!(!html.contains(source));
+    assert!(!html.contains("const secret = 42"));
+    assert!(!html.contains("private original content"));
+    assert!(!html.contains("chunk-data-"));
+    let json = html
+        .split("id=\"report-data\">")
+        .nth(1)
+        .unwrap()
+        .split("</script>")
+        .next()
+        .unwrap();
+    let data: serde_json::Value = serde_json::from_str(json).unwrap();
+    assert_eq!(data["bundles"][0]["sources"][0]["source"], source);
+    assert_eq!(data["totals"]["bytes"], 18);
 }

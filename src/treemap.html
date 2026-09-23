@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-src 'self' about:; base-uri 'none'; form-action 'none'"
+    />
+    <title>bundle-trace · Bundle explorer</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f5f7fa;
+        --panel: #fff;
+        --text: #202c3a;
+        --muted: #5f6d7c;
+        --border: #dce2e9;
+        --accent: #3156b0;
+        --observed: #c1e2d4;
+        --unobserved: #f0d2bf;
+        --unmeasured: #dce3ef;
+        --interaction: #d5c5f0;
+        --unknown-initial: #f1df99;
+        --growth: #efc3c3;
+        --reduction: #bce0d7;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #11161d;
+          --panel: #182029;
+          --text: #ecf0f5;
+          --muted: #a2afbf;
+          --border: #354253;
+          --accent: #b2c5ff;
+          --observed: #285541;
+          --unobserved: #693e2c;
+          --unmeasured: #343e50;
+          --interaction: #543f78;
+          --unknown-initial: #655423;
+          --growth: #713d47;
+          --reduction: #27564d;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.6 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 1600px;
+        margin: auto;
+        padding: 32px;
+      }
+      h1 {
+        font-size: 30px;
+        letter-spacing: -0.8px;
+        margin: 4px 0;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 0;
+      }
+      .eyebrow {
+        color: var(--accent);
+        letter-spacing: 2px;
+        font-size: 11px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      .muted,
+      small {
+        color: var(--muted);
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 24px 0 12px;
+      }
+      .stat {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px;
+        background: var(--panel);
+      }
+      .stat strong {
+        display: block;
+        font-size: 25px;
+        margin-top: 6px;
+        font-variant-numeric: tabular-nums;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 22px;
+        margin-top: 24px;
+        min-width: 0;
+      }
+      .controls,
+      .heading,
+      nav,
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+      .heading {
+        justify-content: space-between;
+        margin: 20px 0 10px;
+      }
+      nav {
+        gap: 4px;
+        margin: 18px 0;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 10px;
+        background: var(--panel);
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(0.95);
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+      input[type='search'] {
+        flex: 1;
+        min-width: 180px;
+      }
+      label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        white-space: nowrap;
+      }
+      nav button {
+        color: var(--accent);
+        border: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      nav button[aria-current] {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .legend {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        margin-right: 5px;
+      }
+      #treemap {
+        position: relative;
+        height: clamp(280px, 52vh, 620px);
+        margin: 16px 0;
+      }
+      .tile {
+        position: absolute;
+        border: 0;
+        padding: 0;
+        overflow: hidden;
+        border-radius: 5px;
+        box-shadow: inset 0 0 0 2px var(--panel);
+        text-align: left;
+      }
+      .tile > span {
+        display: block;
+        padding: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tile strong {
+        display: block;
+        font-size: 16px;
+        margin-top: 4px;
+      }
+      .tile small {
+        display: block;
+        color: inherit;
+        opacity: 0.8;
+      }
+      .table-wrap {
+        overflow: auto;
+        max-height: 440px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-variant-numeric: tabular-nums;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        text-align: right;
+        padding: 10px;
+        white-space: nowrap;
+      }
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        position: sticky;
+        top: 0;
+        background: var(--panel);
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      td:first-child {
+        width: 50%;
+        max-width: 250px;
+      }
+      td button {
+        border: 0;
+        padding: 0;
+        text-align: left;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--accent);
+      }
+      #file {
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin: 16px 0;
+        overflow-wrap: anywhere;
+      }
+      #file code {
+        display: block;
+        margin: 10px 0;
+        white-space: pre-wrap;
+      }
+      #code-frame { width: 100%; height: 900px; border: 1px solid var(--border); border-radius: 8px; }
+      .tile.new-source { outline: 3px dashed var(--accent); outline-offset: -6px; }
+      #comparison, #phase-note { overflow-wrap: anywhere; }
+      #removed-list { max-height: 240px; overflow: auto; overflow-wrap: anywhere; }
+      #empty {
+        text-align: center;
+        padding: 40px;
+        color: var(--muted);
+      }
+      #warnings {
+        max-height: 240px;
+        overflow: auto;
+        overflow-wrap: anywhere;
+      }
+      summary {
+        cursor: pointer;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      @media (max-width: 650px) {
+        main {
+          padding: 20px 14px;
+        }
+        .panel {
+          padding: 14px;
+        }
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+        }
+        .stat {
+          padding: 12px;
+        }
+        .stat strong {
+          font-size: 22px;
+        }
+        .controls input {
+          flex-basis: 100%;
+        }
+        h1 {
+          font-size: 26px;
+        }
+        th,
+        td {
+          padding: 8px 6px;
+          font-size: 12px;
+        }
+        #treemap {
+          height: 360px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">BUNDLE TRACE</div>
+        <h1>Bundle explorer</h1>
+        <p class="muted">Find what contributes to your JavaScript bundles.</p>
+      </header>
+      <div id="stats" class="stats"></div>
+      <p class="note">
+        Generated UTF-8 bytes, before compression. Unobserved means not executed in these
+        recordings; unmeasured means no recording is available.
+      </p>
+      <section class="panel">
+        <div class="controls">
+          <input
+            id="search"
+            type="search"
+            aria-label="Search sources or packages"
+            placeholder="Search sources or packages"
+          />
+          <select id="group" aria-label="Group sources">
+            <option value="path">Folders</option>
+            <option value="package">Packages</option>
+          </select>
+          <select id="sort" aria-label="Sort entries">
+            <option value="bytes">Largest first</option>
+            <option value="unobservedBytes">Most unobserved</option>
+            <option value="name">Name</option>
+          </select>
+          <label><input id="mapped" type="checkbox" /> Mapped only</label>
+          <label>Coverage <select id="scenario" aria-label="Coverage scenario"><option value="">All scenarios</option></select></label>
+          <label>Initial <select id="initial" aria-label="Initial scenario"><option value="">Choose initial scenario</option></select></label>
+          <select id="color" aria-label="Color tiles by">
+            <option value="coverage">Coverage</option>
+            <option value="phases">First observed scenario</option>
+            <option value="initial">Initial comparison</option>
+            <option value="changes">Change from baseline</option>
+          </select>
+        </div>
+        <nav id="breadcrumbs" aria-label="Location"></nav>
+        <div class="heading">
+          <h2 id="scope"></h2>
+          <span id="scope-count" class="muted" aria-live="polite"></span>
+        </div>
+        <div class="legend" id="legend">
+          <span><i style="background: var(--observed)"></i>Observed</span
+          ><span><i style="background: var(--unobserved)"></i>Unobserved</span
+          ><span><i style="background: var(--unmeasured)"></i>Unmeasured</span>
+        </div>
+        <p id="phase-note" class="note"></p>
+        <p id="comparison" class="note"></p>
+        <p class="note">
+          Tile area shows size; colors show coverage. Select a bundle or folder to zoom in. Use the
+          path above to go back.
+        </p>
+        <div id="treemap" aria-label="Bundle size treemap"></div>
+        <div id="file" hidden></div>
+        <p id="empty" hidden>No matching sources in this location.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Bytes</th>
+                <th>Observed</th>
+                <th>Unobserved</th>
+                <th>Unmeasured</th>
+                <th id="delta-heading" hidden>Δ bytes / unobserved</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <p class="note" id="filter-note"></p>
+        <details id="removed" hidden><summary>Removed sources</summary><ul id="removed-list"></ul></details>
+        <details id="actions" hidden open><summary>Review actions · all selected bundles</summary><ul id="action-list"></ul></details>
+      </section>
+      <details class="panel">
+        <summary id="warnings-title">Analysis details</summary>
+        <p id="scenarios" class="note"></p>
+        <p id="compression" class="note"></p>
+        <ul id="warnings"></ul>
+      </details>
+    </main>
+    <script type="application/json" id="report-data">
+      __BUNDLE_TRACE_DATA__
+    </script>
+    <script>
+      ;(() => {
+        'use strict'
+        const $ = (id) => document.getElementById(id)
+        const report = JSON.parse($('report-data').textContent)
+        $('report-data').textContent = ''
+        const keys = ['bytes', 'observedBytes', 'unobservedBytes', 'unmeasuredBytes']
+        const orderedPhaseKeys = report.scenarios.map((_, index) => 'first' + index)
+        const phaseKeys = ['initialObserved', 'interactionOnly', 'initialUnknown', 'earlierUnknown', ...orderedPhaseKeys]
+        const sumKeys = [...keys, ...phaseKeys, 'newSources', 'growingSources', 'shrinkingSources']
+        const scenarioReports = new Map((report.scenarioReports || []).map((row) => [row.scenario, row]))
+        for (const scenario of report.scenarios) {
+          for (const id of ['scenario', 'initial']) {
+            const option = elementOption(scenario)
+            $(id).append(option)
+          }
+        }
+        function elementOption(value) {
+          const option = document.createElement('option')
+          option.value = value
+          option.textContent = value
+          return option
+        }
+        $('initial').value = report.initialScenario || ''
+        $('color').value = report.scenarios.length > 1 ? 'phases' : report.baseline ? 'changes' : 'coverage'
+        $('color').querySelector('[value="changes"]').disabled = !report.baseline
+        $('scenario').parentElement.hidden = $('initial').parentElement.hidden = !report.scenarios.length
+        const number = (value) => value.toLocaleString('en-US')
+        const size = (value) =>
+          value < 1000
+            ? number(value) + ' B'
+            : (value / (value < 1e6 ? 1e3 : 1e6)).toLocaleString('en-US', {
+                maximumFractionDigits: 1,
+              }) + (value < 1e6 ? ' KB' : ' MB')
+        const element = (tag, text) => {
+          const node = document.createElement(tag)
+          if (text !== undefined) node.textContent = text
+          return node
+        }
+        const phaseColor = (index) => index === 0 ? 'var(--observed)' : index === 1 ? 'var(--interaction)' :
+          `hsl(${(index * 137 + 30) % 360} 42% ${matchMedia('(prefers-color-scheme: dark)').matches ? 32 : 79}%)`
+        const actionLabels = {'defer-review': 'Review lazy loading', 'split-review': 'Split later-only functionality',
+          'dynamic-boundary-review': 'Inspect existing dynamic import', 'inspect-imports': 'Inspect import paths',
+          'measure-initial': 'Measure initial execution', 'removal-review': 'Review unused source'}
+        const add = (a, b) => {
+          for (const key of sumKeys) a[key] += b[key] || 0
+        }
+        const make = (name, parent, kind) => ({
+          name,
+          parent,
+          kind,
+          children: new Map(),
+          ...Object.fromEntries(sumKeys.map((key) => [key, 0])),
+        })
+        let root, focus, changes, sourceChanges, bundleChanges
+        function build() {
+          const selected = scenarioReports.get($('scenario').value)
+          const selectedBundles = new Map((selected?.bundles || []).map((b) => [b.path, b]))
+          const initial = scenarioReports.get($('initial').value)
+          const initialBundles = new Map((initial?.bundles || []).map((b) => [b.path, b]))
+          changes = selected
+            ? report.baseline?.scenarios.find((s) => s.scenario === selected.scenario)
+            : report.baseline
+          sourceChanges = new Map((changes?.sources || []).map((row) => [row.name, row]))
+          bundleChanges = new Map((changes?.bundles || []).map((row) => [row.name, row]))
+          root = make('All bundles', null, 'root')
+          for (const [bundleIndex, bundle] of report.bundles.entries()) {
+            const node = make(bundle.path, root, 'bundle')
+            node.change = bundleChanges.get(bundle.path)
+            root.children.set(bundle.path, node)
+            const selectedSources = new Map((selectedBundles.get(bundle.path)?.sources || []).map((s) => [s.source, s]))
+            const initialSources = new Map((initialBundles.get(bundle.path)?.sources || []).map((s) => [s.source, s]))
+            for (const [sourceIndex, original] of bundle.sources.entries()) {
+              const source = selectedSources.get(original.source) || original
+              const parts =
+                $('group').value === 'package'
+                  ? [source.package, source.source]
+                  : source.source.replaceAll('\\', '/').split('/').filter(Boolean)
+              if ($('group').value === 'path' && parts[0] === '..') {
+                let prefix = ''
+                while (parts[0] === '..') { prefix += '../'; parts.shift() }
+                parts.unshift('Outside analysis root (' + prefix + ')')
+              }
+              if (!parts.length) parts.push(source.source || '(unnamed source)')
+              let parent = node
+              for (let i = 0; i < parts.length; i++) {
+                const leaf = i === parts.length - 1,
+                  key = (leaf ? 'file:' : 'folder:') + parts[i]
+                if (!parent.children.has(key))
+                  parent.children.set(key, make(parts[i], parent, leaf ? 'file' : 'folder'))
+                parent = parent.children.get(key)
+              }
+              parent.source = source.source
+              parent.package = source.package
+              parent.bundleIndex = bundleIndex
+              parent.sourceIndex = sourceIndex
+              parent.change = sourceChanges.get(source.source)
+              parent.estimatedCompression = original.estimatedCompression
+              parent.firstObserved = original.firstObserved || []
+              for (const phase of parent.firstObserved) {
+                const index = report.scenarios.indexOf(phase.scenario)
+                if (phase.earlierUnmeasured) parent.earlierUnknown += phase.bytes
+                else if (index >= 0) parent[orderedPhaseKeys[index]] += phase.bytes
+              }
+              const first = initialSources.get(source.source)
+              parent.initialObserved = first?.observedBytes || 0
+              parent.interactionOnly = first && !first.unmeasuredBytes ? original.observedBytes - first.observedBytes : 0
+              parent.initialUnknown = first?.unmeasuredBytes ? original.observedBytes : 0
+              parent.newSources = Number(parent.change?.change === 'added')
+              parent.growingSources = Number(parent.change?.delta.bytes > 0)
+              parent.shrinkingSources = Number(parent.change?.delta.bytes < 0)
+              parent.search = (
+                source.source +
+                ' ' +
+                source.package +
+                ' ' +
+                bundle.path
+              ).toLowerCase()
+              add(parent, source)
+            }
+          }
+          function total(node) {
+            for (const child of node.children.values()) {
+              total(child)
+              add(node, child)
+            }
+          }
+          total(root)
+          focus = root
+        }
+        function filtered(node) {
+          if (node.kind === 'file')
+            return (!$('mapped').checked || node.source !== '[unmapped]') &&
+              node.search.includes($('search').value.toLowerCase())
+              ? {...node, ref: node}
+              : null
+          const result = {
+            ...node,
+            ref: node,
+            children: new Map(),
+            ...Object.fromEntries(sumKeys.map((key) => [key, 0])),
+          }
+          for (const [key, child] of node.children) {
+            const match = filtered(child)
+            if (match) {
+              result.children.set(key, match)
+              add(result, match)
+            }
+          }
+          return result.children.size ? result : null
+        }
+        function compact(node) {
+          let name = node.name
+          while (node.kind === 'folder' && node.children.size === 1) {
+            const child = node.children.values().next().value
+            if (child.kind !== 'folder') break
+            node = child
+            name += '/' + node.name
+          }
+          return {...node, name}
+        }
+        function select(node) {
+          focus = node
+          render()
+        }
+        function tooltip(row) {
+          return (
+            (row.source || row.name) +
+            '\n' +
+            keys
+              .map(
+                (key, i) =>
+                  ['Size', 'Observed', 'Unobserved', 'Unmeasured'][i] +
+                  ': ' +
+                  number(row[key]) +
+                  ' B',
+              )
+              .join('\n') +
+            ($('initial').value ? '\nInitial observed: ' + number(row.initialObserved) + ' B' +
+              '\nInteraction only (initial measured): ' + number(row.interactionOnly) + ' B' +
+              '\nLater observed (initial unmeasured): ' + number(row.initialUnknown) + ' B' : '') +
+            (row.change ? '\nBaseline ' + (row.kind === 'file' ? '(source across all bundles)' : '(bundle)') +
+              ': ' + signed(row.change.delta.bytes) + ' B; unobserved ' + signed(row.change.delta.unobservedBytes) + ' B' : '')
+          )
+        }
+        const signed = (value) => (value > 0 ? '+' : '') + number(value)
+        function color(row) {
+          if ($('color').value === 'changes' && changes) {
+            return row.growingSources || row.change?.delta.bytes > 0 ? 'var(--growth)' :
+              row.shrinkingSources || row.change?.delta.bytes < 0 ? 'var(--reduction)' : 'var(--unmeasured)'
+          }
+          if (($('color').value === 'phases' && report.scenarios.length) || ($('color').value === 'initial' && $('initial').value)) {
+            let offset = 0
+            const phases = $('color').value === 'phases' ? [
+              ...orderedPhaseKeys.map((key, index) => [key, phaseColor(index)]), ['earlierUnknown', 'var(--unknown-initial)'],
+            ] : [
+              ['initialObserved', 'var(--observed)'], ['interactionOnly', 'var(--interaction)'], ['initialUnknown', 'var(--unknown-initial)'],
+            ]
+            const stops = [...phases,
+              ['unobservedBytes', 'var(--unobserved)'], ['unmeasuredBytes', 'var(--unmeasured)'],
+            ].map(([key, color]) => {
+              const start = offset
+              offset += row[key] / (row.bytes || 1) * 100
+              return `${color} ${start}% ${offset}%`
+            })
+            return `linear-gradient(90deg,${stops.join(',')})`
+          }
+          const total = row.bytes || 1,
+            observed = (row.observedBytes / total) * 100,
+            unobserved = ((row.observedBytes + row.unobservedBytes) / total) * 100
+          return `linear-gradient(90deg,var(--observed) 0% ${observed}%,var(--unobserved) ${observed}% ${unobserved}%,var(--unmeasured) ${unobserved}% 100%)`
+        }
+        function layout(items, x, y, w, h) {
+          if (!items.length) return
+          if (items.length === 1) {
+            const row = items[0],
+              tile = element('button'),
+              label = element('span', row.name)
+            tile.className = 'tile'
+            if ($('color').value === 'changes' && row.newSources) tile.classList.add('new-source')
+            tile.dataset.bytes = row.bytes
+            tile.dataset.interactionOnly = row.interactionOnly
+            tile.dataset.initialUnknown = row.initialUnknown
+            tile.dataset.firstObserved = JSON.stringify(orderedPhaseKeys.map(key => row[key]))
+            tile.dataset.earlierUnknown = row.earlierUnknown
+            tile.dataset.change = row.change?.change || ''
+            tile.dataset.kind = row.kind
+            tile.style.cssText = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;background:${color(row)}`
+            tile.title = tooltip(row)
+            tile.setAttribute('aria-label', row.name + ', ' + number(row.bytes) + ' bytes')
+            label.append(
+              element('strong', size(row.bytes)),
+              element('small', $('color').value === 'changes' && row.newSources ? 'Contains new source' : row.kind === 'file' ? 'Source file' : 'Select to explore'),
+            )
+            label.hidden =
+              (w / 100) * $('treemap').clientWidth < 85 ||
+              (h / 100) * $('treemap').clientHeight < 70
+            tile.append(label)
+            tile.onclick = () => select(row.ref)
+            $('treemap').append(tile)
+            return
+          }
+          const total = items.reduce((sum, row) => sum + row.bytes, 0)
+          let sum = 0,
+            index = 0
+          while (index < items.length - 1 && sum < total / 2) sum += items[index++].bytes
+          const ratio = sum / total
+          if (w * $('treemap').clientWidth >= h * $('treemap').clientHeight) {
+            layout(items.slice(0, index), x, y, w * ratio, h)
+            layout(items.slice(index), x + w * ratio, y, w * (1 - ratio), h)
+          } else {
+            layout(items.slice(0, index), x, y, w, h * ratio)
+            layout(items.slice(index), x, y + h * ratio, w, h * (1 - ratio))
+          }
+        }
+        function render() {
+          renderStats(scenarioReports.get($('scenario').value)?.totals || report.totals)
+          const phases = $('color').value === 'phases' && report.scenarios.length
+          const initialView = $('color').value === 'initial' && $('initial').value
+          const changing = $('color').value === 'changes' && changes
+          const legends = changing ? [['--growth', 'Growth'], ['--reduction', 'Reduction'], ['--unmeasured', 'Unchanged · dashed border = new source']] :
+            initialView ? [['--observed', 'Initial executed'], ['--interaction', 'Interaction only'], ['--unknown-initial', 'Later executed · initial unmeasured'], ['--unobserved', 'No observed execution'], ['--unmeasured', 'Unmeasured']] :
+            [['--observed', 'Observed'], ['--unobserved', 'Unobserved'], ['--unmeasured', 'Unmeasured']]
+          const phaseLegends = [...report.scenarios.map((name, i) => [phaseColor(i), 'First observed: ' + name]),
+            ['var(--unknown-initial)', 'Observed · earlier scenarios unmeasured'], ['var(--unobserved)', 'No observed execution'], ['var(--unmeasured)', 'Unmeasured']]
+          $('legend').replaceChildren(...(phases ? phaseLegends : legends).map(([color, text]) => {
+            const label = element('span'), icon = element('i')
+            icon.style.background = phases ? color : `var(${color})`
+            label.append(icon, document.createTextNode(text))
+            return label
+          }))
+          $('phase-note').textContent = phases ? 'First observed in the declared order: ' + report.scenarios.join(' → ') + '. Yellow bytes have missing earlier measurements; their first execution is unknown. This order compares recordings, not wall-clock timestamps.' :
+            initialView ? 'Initial: ' + $('initial').value + '. Purple bytes are deferral candidates in scripts measured during initial. Yellow bytes have no initial recording. Execution evidence does not prove loading time or that removal is safe.' :
+            $('color').value === 'initial' ? 'Choose an initial scenario to compare execution phases.' : ''
+          $('comparison').textContent = changes ? 'Baseline: ' + signed(changes.totals.delta.bytes) + ' generated B · ' + signed(changes.totals.delta.unobservedBytes) + ' unobserved B. Source deltas aggregate all bundles; moved sources keep their identity. Folder colors indicate contained changes.' :
+            report.baseline ? 'No matching baseline for this scenario.' : ''
+          $('delta-heading').hidden = !changes
+          const removed = (changes?.sources || []).filter((row) => row.change === 'removed')
+          $('removed').hidden = !removed.length
+          $('removed-list').replaceChildren(...removed.map((row) => element('li', row.name + ': ' + signed(row.delta.bytes) + ' B')))
+          const view = filtered(focus),
+            items = view
+              ? focus.kind === 'file'
+                ? [view]
+                : [...view.children.values()].map(compact)
+              : []
+          const order = $('sort').value
+          items.sort(
+            (a, b) => (order === 'name' ? 0 : b[order] - a[order]) || a.name.localeCompare(b.name),
+          )
+          $('breadcrumbs').replaceChildren()
+          const ancestors = []
+          for (let node = focus; node; node = node.parent) ancestors.unshift(node)
+          for (const node of ancestors) {
+            const button = element('button', node.name)
+            button.onclick = () => select(node)
+            if (node === focus) button.setAttribute('aria-current', 'location')
+            $('breadcrumbs').append(button)
+          }
+          $('scope').textContent = focus.name
+          $('scope-count').textContent = items.length + ' entries · ' + size(view?.bytes || 0)
+          $('rows').replaceChildren()
+          for (const row of items) {
+            const tr = element('tr'),
+              td = element('td'),
+              button = element('button', row.name)
+            button.title = tooltip(row)
+            button.onclick = () => select(row.ref)
+            td.append(button)
+            tr.append(td)
+            for (const key of keys) tr.append(element('td', number(row[key])))
+            if (changes) tr.append(element('td', row.change ? signed(row.change.delta.bytes) + ' / ' + signed(row.change.delta.unobservedBytes) : '—'))
+            $('rows').append(tr)
+          }
+          $('file').hidden = focus.kind !== 'file' || !view
+          const selection = [focus.bundleIndex, focus.sourceIndex, $('scenario').value, $('initial').value].join('|')
+          if (!$('file').hidden && $('file').dataset.selection !== selection) {
+            $('file').dataset.selection = selection
+            $('file').replaceChildren(
+              element('strong', 'Source contribution'),
+              element('code', focus.source),
+              element('p', 'Package: ' + focus.package),
+              element('p', number(view.bytes) + ' generated UTF-8 bytes'),
+            )
+            if ($('initial').value) $('file').append(element('p',
+              number(view.initialObserved) + ' B initial · ' + number(view.interactionOnly) +
+              ' B interaction only · ' + number(view.initialUnknown) + ' B later executed with initial unmeasured'))
+            for (const phase of focus.firstObserved) $('file').append(element('p', 'First observed: ' + phase.scenario + ' · ' + number(phase.bytes) + ' B' +
+              (phase.earlierUnmeasured ? ' (earlier scenarios unmeasured)' : '')))
+            if (focus.estimatedCompression) $('file').append(element('p', 'Estimated isolated source size: gzip ' + size(focus.estimatedCompression.gzipBytes) +
+              ' · Brotli ' + size(focus.estimatedCompression.brotliBytes) + '. Attributed fragments compressed in isolation; not measured transfer savings.'))
+            if (report.initialScenario) $('file').append(element('p', 'Estimates and review actions compare with recorded initial scenario: ' + report.initialScenario))
+            for (const scenario of report.scenarioReports) {
+              const candidate = scenario.interactionCandidates.find(row => row.source === focus.source)
+              if (candidate?.estimatedDeferrableCompression) $('file').append(element('p', scenario.scenario + ' deferral estimate: gzip ' +
+                size(candidate.estimatedDeferrableCompression.gzipBytes) + ' · ' + number(candidate.interactionOnlyBytes) + ' raw B across all bundles. Estimate requires rebuild verification.'))
+            }
+            for (const action of report.recommendations.filter(row => row.source === focus.source)) {
+              $('file').append(element('strong', actionLabels[action.kind] + (action.scenario ? ' · ' + action.scenario : '')), element('p', action.explanation))
+            }
+            const graph = report.importPaths?.find((row) => row.resolvedSource === focus.source)
+            $('file').append(element('p', graph?.path ? 'Import path: ' + graph.path.join(' → ') +
+              ' (' + graph.graphFormat + ' graph)' : 'Import path unavailable for this source.'))
+            for (const edge of graph?.edges || []) $('file').append(element('code', edge.from +
+              (edge.location ? ':' + edge.location.line + ':' + edge.location.column : ' (location unavailable)') +
+              ' —' + edge.kind + '→ ' + edge.to))
+            if (report.inspectorHtml) {
+              const frame = element('iframe')
+              frame.id = 'code-frame'
+              frame.title = 'Source code inspector'
+              frame.setAttribute('sandbox', 'allow-scripts')
+              frame.name = 'bundle-trace:' + JSON.stringify({bundle: focus.bundleIndex, source: focus.sourceIndex, scenario: $('scenario').value})
+              frame.srcdoc = report.inspectorHtml
+              $('file').append(element('p', 'Choose a scenario in the inspector to see its executed and unexecuted ranges.'), frame)
+            } else $('file').append(element('p', 'Generate with --details to include the code inspector.'))
+          }
+          $('empty').hidden = items.length !== 0
+          $('treemap').hidden = focus.kind === 'file' || items.length === 0
+          $('treemap').replaceChildren()
+          if (!$('treemap').hidden)
+            layout(
+              items.filter((row) => row.bytes > 0).sort((a, b) => b.bytes - a.bytes),
+              0,
+              0,
+              100,
+              100,
+            )
+          $('filter-note').textContent =
+            $('search').value || $('mapped').checked
+              ? 'Search and mapped-only filtering affect this view. Overall totals and CI budgets remain unchanged.'
+              : 'Every entry is available in the table, including tiles too small for a label.'
+        }
+        function renderStats(totals) {
+          $('stats').replaceChildren()
+          for (const [i, key] of keys.entries()) {
+            const card = element('div')
+            card.className = 'stat'
+            card.title = number(totals[key]) + ' UTF-8 bytes · ' + ($('scenario').value || 'All scenarios combined')
+            card.append(
+              element('small', ['Total generated', 'Observed', 'Unobserved', 'Unmeasured'][i]),
+              element('strong', size(totals[key])),
+            )
+            $('stats').append(card)
+          }
+        }
+        $('actions').hidden = !report.recommendations.length
+        $('actions').querySelector('summary').textContent = 'Review actions · all selected bundles' +
+          (report.initialScenario ? ' · initial: ' + report.initialScenario : '')
+        for (const action of report.recommendations.slice(0, 20)) {
+          const item = element('li'), button = element('button', action.source)
+          button.onclick = () => {
+            const find = (node) => node.kind === 'file' && node.source === action.source ? node :
+              [...node.children.values()].map(find).find(Boolean)
+            const target = find(root)
+            if (target) { $('search').value = ''; select(target) }
+          }
+          item.append(button, element('p', actionLabels[action.kind] + (action.scenario ? ' · ' + action.scenario : '') + ' · ' + number(action.bytes) + ' B' + (action.estimatedCompression ? ' · isolated gzip estimate ' + size(action.estimatedCompression.gzipBytes) : '')))
+          $('action-list').append(item)
+        }
+        $('scenarios').textContent =
+          'Scenarios: ' +
+          (report.scenarios.join(', ') || 'Static analysis · no recordings') +
+          '. ' +
+          report.excludedBundles.length +
+          ' bundles excluded by analysis filters.'
+        $('compression').textContent = report.compression
+          ? 'Sum of independently compressed bundles: gzip ' +
+            size(report.compression.gzipBytes) +
+            ', Brotli ' +
+            size(report.compression.brotliBytes) +
+            '.'
+          : ''
+        $('warnings-title').textContent =
+          'Analysis details · ' + report.warnings.length + ' warnings'
+        for (const warning of [
+          ...report.warnings,
+          ...report.budgetFailures.map((s) => 'Budget exceeded: ' + s),
+        ])
+          $('warnings').append(element('li', warning))
+        if (report.budgetFailures.length) $('warnings-title').parentElement.open = true
+        $('search').oninput = render
+        $('mapped').onchange = render
+        $('sort').onchange = render
+        $('group').onchange = () => {
+          build()
+          render()
+        }
+        for (const id of ['scenario', 'initial', 'color']) $(id).onchange = () => {
+          if (id === 'initial' && $('initial').value) $('color').value = 'initial'
+          if (id === 'scenario' && $('scenario').value) $('color').value = report.baseline ? 'changes' : 'coverage'
+          if (['phases', 'initial'].includes($('color').value)) $('scenario').value = ''
+          build()
+          render()
+        }
+        let frame
+        window.addEventListener('resize', () => {
+          cancelAnimationFrame(frame)
+          frame = requestAnimationFrame(render)
+        })
+        build()
+        render()
+      })()
+    </script>
+  </body>
+</html>

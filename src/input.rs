@@ -293,8 +293,9 @@ pub fn load(
         }
         ensure!(
             matched > 0 || entries.is_empty(),
-            "{}: no JavaScript coverage entries matched --dir; configure --url-prefix or --script-map",
-            path.display()
+            "{}: no JavaScript coverage entries mapped to analysis root {}; configure --url-prefix or --script-map",
+            path.display(),
+            root.display()
         );
     }
     Ok((index, scenarios, warnings))

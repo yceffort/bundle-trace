@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "kind": "static",
+      "bundles": 103,
+      "mobileFits": true
+    },
+    {
+      "kind": "coverage",
+      "bundles": 13,
+      "mobileFits": true
+    }
+  ],
+  "errors": [],
+  "requests": []
+}

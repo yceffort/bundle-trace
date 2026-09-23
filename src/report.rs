@@ -9,6 +9,13 @@ struct HtmlReport<'a> {
     schema_version: u32,
     totals: &'a crate::Counts,
     scenarios: &'a [String],
+    initial_scenario: &'a Option<String>,
+    scenario_reports: &'a [crate::scenario::ScenarioReport],
+    baseline: &'a Option<crate::baseline::Comparison>,
+    import_paths: &'a Option<Vec<crate::metadata::ImportPath>>,
+    recommendations: &'a [crate::recommendations::Recommendation],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    inspector_html: Option<String>,
     warnings: &'a [String],
     excluded_bundles: &'a [String],
     budget_failures: &'a [String],
@@ -32,6 +39,8 @@ struct HtmlSource<'a> {
     source: &'a str,
     package: &'a str,
     has_content: bool,
+    first_observed: &'a [crate::scenario::FirstObserved],
+    estimated_compression: &'a Option<crate::ci::CompressedSizes>,
     #[serde(flatten)]
     counts: &'a crate::Counts,
 }
@@ -42,6 +51,7 @@ struct ChunkDetails<'a> {
     generated_source: &'a str,
     contents: Vec<&'a Option<String>>,
     spans: CompactSpans<'a>,
+    scenario_spans: std::collections::BTreeMap<&'a str, CompactSpans<'a>>,
 }
 
 /// The HTML wire format uses tuples; the public JSON keeps named fields.
@@ -79,6 +89,12 @@ pub fn html(report: &Report) -> Result<String> {
         schema_version: report.schema_version,
         totals: &report.totals,
         scenarios: &report.scenarios,
+        initial_scenario: &report.initial_scenario,
+        scenario_reports: &report.scenario_reports,
+        baseline: &report.baseline,
+        import_paths: &report.import_paths,
+        recommendations: &report.recommendations,
+        inspector_html: None,
         warnings: &report.warnings,
         excluded_bundles: &report.excluded_bundles,
         budget_failures: &report.budget_failures,
@@ -96,6 +112,8 @@ pub fn html(report: &Report) -> Result<String> {
                         source: &s.source,
                         package: &s.package,
                         has_content: s.content.is_some(),
+                        first_observed: &s.first_observed,
+                        estimated_compression: &s.estimated_compression,
                         counts: &s.counts,
                     })
                     .collect(),
@@ -111,10 +129,95 @@ pub fn html(report: &Report) -> Result<String> {
                 generated_source: &bundle.generated_source,
                 contents: bundle.sources.iter().map(|s| &s.content).collect(),
                 spans: CompactSpans(&bundle.spans),
+                scenario_spans: bundle
+                    .scenario_spans
+                    .iter()
+                    .map(|(name, spans)| (name.as_str(), CompactSpans(spans)))
+                    .collect(),
             })?,
         )?);
     }
     Ok(include_str!("report.html").replacen("__BUNDLE_TRACE_PAYLOADS__", &payloads, 1))
+}
+
+/// A compact size/coverage explorer: no code or interval payload is necessary.
+pub fn treemap(report: &Report) -> Result<String> {
+    treemap_with_inspector(report, false)
+}
+
+/// Detailed treemaps reuse the existing inspector in an offline, sandboxed frame.
+pub fn treemap_with_inspector(report: &Report, include_inspector: bool) -> Result<String> {
+    let json = serde_json::to_string(&HtmlReport {
+        schema_version: report.schema_version,
+        totals: &report.totals,
+        scenarios: &report.scenarios,
+        initial_scenario: &report.initial_scenario,
+        scenario_reports: &report.scenario_reports,
+        baseline: &report.baseline,
+        import_paths: &report.import_paths,
+        recommendations: &report.recommendations,
+        inspector_html: if include_inspector {
+            Some(html(report)?)
+        } else {
+            None
+        },
+        warnings: &report.warnings,
+        excluded_bundles: &report.excluded_bundles,
+        budget_failures: &report.budget_failures,
+        compression: &report.compression,
+        bundles: report
+            .bundles
+            .iter()
+            .map(|b| HtmlBundle {
+                path: &b.path,
+                counts: &b.counts,
+                sources: b
+                    .sources
+                    .iter()
+                    .map(|s| HtmlSource {
+                        source: &s.source,
+                        package: &s.package,
+                        has_content: false,
+                        first_observed: &s.first_observed,
+                        estimated_compression: &s.estimated_compression,
+                        counts: &s.counts,
+                    })
+                    .collect(),
+                verification: &b.verification,
+            })
+            .collect(),
+    })?;
+    // Summary payloads are small. Escaped JSON avoids compression/decode costs.
+    let payload = escaped_json(&json);
+    Ok(include_str!("treemap.html").replacen("__BUNDLE_TRACE_DATA__", &payload, 1))
+}
+
+pub fn tsv(report: &Report) -> String {
+    let mut output = String::from("Source\tBytes\tObserved\tUnobserved\tUnmeasured\n");
+    for row in &report.sources {
+        let name = row
+            .source
+            .replace('\\', "\\\\")
+            .replace('\t', "\\t")
+            .replace('\r', "\\r")
+            .replace('\n', "\\n");
+        output.push_str(&format!(
+            "{name}\t{}\t{}\t{}\t{}\n",
+            row.counts.bytes,
+            row.counts.observed_bytes,
+            row.counts.unobserved_bytes,
+            row.counts.unmeasured_bytes
+        ));
+    }
+    output
+}
+
+fn escaped_json(json: &str) -> String {
+    json.replace('&', "\\u0026")
+        .replace('<', "\\u003c")
+        .replace('>', "\\u003e")
+        .replace('\u{2028}', "\\u2028")
+        .replace('\u{2029}', "\\u2029")
 }
 
 fn embedded_data(id: &str, json: String) -> Result<String> {
@@ -124,14 +227,7 @@ fn embedded_data(id: &str, json: String) -> Result<String> {
             base64::engine::general_purpose::STANDARD.encode(crate::ci::gzip(json.as_bytes())?),
         )
     } else {
-        (
-            "json",
-            json.replace('&', "\\u0026")
-                .replace('<', "\\u003c")
-                .replace('>', "\\u003e")
-                .replace('\u{2028}', "\\u2028")
-                .replace('\u{2029}', "\\u2029"),
-        )
+        ("json", escaped_json(&json))
     };
     Ok(format!(
         "<script type=\"application/json\" data-encoding=\"{encoding}\" id=\"{id}\">{payload}</script>\n"

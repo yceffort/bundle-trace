@@ -48,8 +48,15 @@ jobs:
           --json artifacts/example.json --html artifacts/example.html
 
   browser:
-    name: Browser, input formats, and collector
-    runs-on: ubuntu-latest
+    name: Browser and real-build corpus (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
@@ -61,3 +68,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser
+      - run: pnpm test:corpus

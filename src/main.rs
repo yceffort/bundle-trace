@@ -10,25 +10,61 @@ use clap::Parser;
     about = "Trace generated JavaScript bytes to sources; import V8/DevTools coverage and export offline reports"
 )]
 struct Args {
-    /// Recursively scan JS files, local sourceMappingURL maps or adjacent .map files.
-    #[arg(long)]
-    dir: PathBuf,
+    /// Analysis root; recursively scan JS files when no files/globs are supplied.
+    #[arg(long, required_unless_present = "inputs")]
+    dir: Option<PathBuf>,
+    /// JavaScript files/globs relative to CWD; optionally an explicit .map after one file.
+    #[arg(value_name = "FILE_OR_GLOB")]
+    inputs: Vec<String>,
     /// Repeat for multiple scenarios. Observed ranges are unioned, not summed.
     #[arg(long)]
     coverage: Vec<PathBuf>,
+    /// Initial scenario name for identifying bytes executed only during interactions.
+    #[arg(long)]
+    initial_scenario: Option<String>,
+    /// First-observation order; comma-separated scenario names, each exactly once.
+    #[arg(long, value_delimiter = ',')]
+    scenario_order: Vec<String>,
+    /// Estimate source gzip/Brotli sizes by compressing attributed fragments in isolation.
+    #[arg(long)]
+    source_compression: bool,
+    /// Compare against a JSON report generated with the same analysis root convention.
+    #[arg(long)]
+    baseline: Option<PathBuf>,
+    /// Fail when total generated-byte growth over --baseline exceeds this limit.
+    #[arg(long, requires = "baseline")]
+    max_added_bytes: Option<usize>,
+    /// Limit unobserved-byte growth in --initial-scenario against the same baseline scenario.
+    #[arg(long, requires_all = ["baseline", "initial_scenario"])]
+    max_added_unobserved_bytes: Option<usize>,
     /// Optional esbuild metafile for import paths (not inferred from source maps).
     #[arg(long)]
     metafile: Option<PathBuf>,
+    /// Build working directory used by esbuild metafile input keys (defaults to CWD).
+    #[arg(long, requires = "metafile")]
+    metafile_root: Option<PathBuf>,
+    /// Bundler graph exported by the graph adapters (esbuild/webpack/Rollup/Vite/Turbopack).
+    #[arg(long, conflicts_with = "metafile")]
+    graph: Option<PathBuf>,
+    /// Build/project root for graph source paths, defaults to CWD.
+    #[arg(long, requires = "graph")]
+    graph_root: Option<PathBuf>,
     /// Write source/bundle totals. Use --details to include code and ranges.
     #[arg(long)]
     json: Option<PathBuf>,
-    /// Include generated/original code and all mapping intervals in JSON (can be large).
+    /// Include code/ranges in JSON and an inline inspector in treemaps (can be large).
     #[arg(long)]
     details: bool,
     /// Write a self-contained interactive HTML report (includes source code).
     #[arg(long)]
     html: Option<PathBuf>,
-    /// Strip this URL prefix to obtain a path under --dir. Repeatable; end with /.
+    /// Write an interactive treemap; add --details for the code inspector.
+    #[arg(long)]
+    treemap: Option<PathBuf>,
+    /// Write source totals as TSV. Use - for stdout with any output option.
+    #[arg(long)]
+    tsv: Option<PathBuf>,
+    /// Strip this URL prefix to obtain an analysis-root-relative path. Repeatable; end with /.
     #[arg(long)]
     url_prefix: Vec<String>,
     /// JSON object mapping exact coverage URLs to relative bundle paths.
@@ -64,26 +100,71 @@ struct Args {
     /// Fail when unmeasured bytes exceed this budget.
     #[arg(long)]
     max_unmeasured_bytes: Option<usize>,
-    /// Print an import path to this exact esbuild input key.
-    #[arg(long, requires = "metafile")]
+    /// Print the import chain and available locations for a graph input or report source.
+    #[arg(long)]
     why: Option<String>,
     #[arg(long, default_value_t = 20)]
     limit: usize,
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let mut args = Args::parse();
+    let default_treemap = !args.inputs.is_empty()
+        && args.json.is_none()
+        && args.html.is_none()
+        && args.treemap.is_none()
+        && args.tsv.is_none()
+        && args.markdown.is_none();
+    if default_treemap {
+        args.treemap = Some(PathBuf::from("bundle-trace.html"));
+    }
+    let stdout_count = [
+        &args.json,
+        &args.html,
+        &args.treemap,
+        &args.tsv,
+        &args.markdown,
+    ]
+    .iter()
+    .filter(|p| p.as_ref().is_some_and(|p| p.as_os_str() == "-"))
+    .count();
+    ensure!(
+        stdout_count <= 1,
+        "only one report may be written to stdout"
+    );
+    macro_rules! status { ($($arg:tt)*) => { if stdout_count > 0 { eprintln!($($arg)*); } else { println!($($arg)*); } }; }
+    let selection = if args.inputs.is_empty() {
+        None
+    } else {
+        Some(bundle_trace::selection::resolve(
+            &args.inputs,
+            args.dir.as_deref(),
+        )?)
+    };
+    let dir = selection
+        .as_ref()
+        .map(|s| s.root.clone())
+        .or(args.dir)
+        .unwrap();
     let mut config: bundle_trace::ci::Config = if let Some(path) = &args.config {
         serde_json::from_slice(&fs::read(path)?).context("invalid --config")?
     } else {
         Default::default()
     };
     let mut options = bundle_trace::AnalyzeOptions {
+        initial_scenario: args.initial_scenario,
+        scenario_order: args.scenario_order,
+        source_compression: args.source_compression,
         include: config.include,
         exclude: config.exclude,
-        details: args.details || args.html.is_some(),
+        // Retain sourcesContent temporarily to verify graph source snapshots.
+        details: args.details || args.html.is_some() || args.graph.is_some(),
         ..Default::default()
     };
+    if let Some(selection) = selection {
+        options.files = Some(selection.files);
+        options.maps = selection.maps;
+    }
     options.include.extend(args.include);
     options.exclude.extend(args.exclude);
     options.compression = config.compression
@@ -113,38 +194,120 @@ fn main() -> Result<()> {
             "duplicate --map for {bundle}"
         );
     }
-    let mut report = bundle_trace::analyze_with_options(&args.dir, &args.coverage, &options)?;
-    report.budget_failures = config.budgets.check(&report);
-    if let Some(path) = args.metafile {
-        report.import_paths = Some(bundle_trace::metadata::import_paths(&fs::read(path)?)?);
+    let mut report = bundle_trace::analyze_with_options(&dir, &args.coverage, &options)?;
+    if let Some(path) = args.baseline {
+        let comparison = bundle_trace::baseline::compare(&report, &fs::read(&path)?)
+            .with_context(|| format!("compare baseline {}", path.display()))?;
+        report.warnings.extend(comparison.warnings.iter().cloned());
+        report.baseline = Some(comparison);
     }
-    println!(
+    report.budget_failures = config.budgets.check(&report);
+    if let Some(limit) = args.max_added_unobserved_bytes {
+        let name = report.initial_scenario.as_deref().unwrap();
+        let comparison = report
+            .baseline
+            .as_ref()
+            .unwrap()
+            .scenarios
+            .iter()
+            .find(|row| row.scenario == name)
+            .with_context(|| format!("baseline has no matching initial scenario {name:?}"))?;
+        if comparison.totals.before.unmeasured_bytes != 0
+            || comparison.totals.after.unmeasured_bytes != 0
+        {
+            report.budget_failures.push(format!("initial unobserved byte growth: cannot check while {name:?} has unmeasured bytes in either report"));
+        } else if comparison.totals.delta.unobserved_bytes > limit as i128 {
+            report.budget_failures.push(format!(
+                "initial unobserved byte growth: {:+} exceeds budget {limit}",
+                comparison.totals.delta.unobserved_bytes
+            ));
+        }
+    }
+    if let Some(limit) = args.max_added_bytes
+        && let Some(comparison) = &report.baseline
+        && comparison.totals.delta.bytes > limit as i128
+    {
+        report.budget_failures.push(format!(
+            "generated byte growth: {:+} exceeds budget {limit}",
+            comparison.totals.delta.bytes
+        ));
+    }
+    if let Some(path) = args.metafile {
+        let mut paths = bundle_trace::metadata::import_paths(&fs::read(path)?)?;
+        bundle_trace::metadata::bind_sources(
+            &mut paths,
+            &dir,
+            &args.metafile_root.unwrap_or(std::env::current_dir()?),
+        )?;
+        report.import_paths = Some(paths);
+    }
+    if let Some(path) = args.graph {
+        bundle_trace::graph::attach(
+            &mut report,
+            &fs::read(path)?,
+            &dir,
+            &args.graph_root.unwrap_or(std::env::current_dir()?),
+        )?;
+    }
+    report.recommendations = bundle_trace::recommendations::build(&report);
+    ensure!(
+        args.why.is_none() || report.import_paths.is_some(),
+        "--why requires --graph or --metafile"
+    );
+    status!(
         "Generated UTF-8 bytes: {} ({} bundles)",
         report.totals.bytes,
         report.bundles.len()
     );
-    println!(
+    status!(
         "Observed: {} | Unobserved: {} | Unmeasured: {}",
         report.totals.observed_bytes,
         report.totals.unobserved_bytes,
         report.totals.unmeasured_bytes
     );
-    println!("Unobserved means not executed during the supplied scenarios, not safe to delete.\n");
+    status!("Unobserved means not executed during the supplied scenarios, not safe to delete.\n");
+    if let Some(comparison) = &report.baseline {
+        status!(
+            "Change from baseline: {:+} generated bytes",
+            comparison.totals.delta.bytes
+        );
+        for row in comparison
+            .sources
+            .iter()
+            .filter(|row| row.change != "unchanged")
+            .take(args.limit)
+        {
+            status!("{:+12}  {} ({})", row.delta.bytes, row.name, row.change);
+        }
+    }
+    for scenario in &report.scenario_reports {
+        status!(
+            "Scenario {}: {} observed | {} unobserved | {} unmeasured",
+            scenario.scenario,
+            scenario.totals.observed_bytes,
+            scenario.totals.unobserved_bytes,
+            scenario.totals.unmeasured_bytes
+        );
+    }
     if !report.excluded_bundles.is_empty() {
-        println!(
+        status!(
             "{} bundles excluded; totals and budgets use selected bundles only.\n",
             report.excluded_bundles.len()
         );
     }
     if let Some(compression) = &report.compression {
-        println!(
+        status!(
             "Whole-file compression sum: gzip {} B | Brotli {} B\n",
-            compression.gzip_bytes, compression.brotli_bytes
+            compression.gzip_bytes,
+            compression.brotli_bytes
         );
     }
-    println!(
+    status!(
         "{:>12} {:>12} {:>12} {:>12}  Package",
-        "Bytes", "Observed", "Unobserved", "Unmeasured"
+        "Bytes",
+        "Observed",
+        "Unobserved",
+        "Unmeasured"
     );
     let mut packages = report.packages.iter().collect::<Vec<_>>();
     if !args.coverage.is_empty() {
@@ -156,7 +319,7 @@ fn main() -> Result<()> {
         });
     }
     for row in packages.into_iter().take(args.limit) {
-        println!(
+        status!(
             "{:>12} {:>12} {:>12} {:>12}  {}",
             row.counts.bytes,
             row.counts.observed_bytes,
@@ -171,24 +334,48 @@ fn main() -> Result<()> {
             .as_ref()
             .unwrap()
             .iter()
-            .find(|row| row.source == source)
-            .ok_or_else(|| {
-                anyhow::anyhow!("no emitted contribution for metafile input {source}")
-            })?;
-        println!(
-            "\nImport path ({} metafile bytes): {}",
-            row.bytes_in_output,
+            .find(|row| row.source == source || row.resolved_source.as_ref() == Some(&source))
+            .ok_or_else(|| anyhow::anyhow!("no matched graph input {source}"))?;
+        status!(
+            "\nImport path ({} graph): {}",
+            row.graph_format,
             row.path
                 .as_ref()
                 .map(|path| path.join(" -> "))
                 .unwrap_or("[unknown]".into())
         );
+        for edge in &row.edges {
+            let location = edge
+                .location
+                .as_ref()
+                .map(|l| format!(":{}:{}", l.line, l.column))
+                .unwrap_or_default();
+            status!(
+                "  {}{} --{:?}--> {}",
+                edge.from,
+                location,
+                edge.kind,
+                edge.to
+            );
+        }
     }
     for warning in &report.warnings {
         eprintln!("warning: {warning}");
     }
     if let Some(path) = args.html {
         write_report(path, bundle_trace::report::html(&report)?)?;
+    }
+    if let Some(path) = args.treemap {
+        write_report(
+            path.clone(),
+            bundle_trace::report::treemap_with_inspector(&report, args.details)?,
+        )?;
+        if default_treemap {
+            status!("Wrote {}", path.display());
+        }
+    }
+    if let Some(path) = args.tsv {
+        write_report(path, bundle_trace::report::tsv(&report))?;
     }
     if !args.details {
         report.strip_details();
@@ -209,6 +396,11 @@ fn main() -> Result<()> {
 }
 
 fn write_report(path: PathBuf, content: String) -> Result<()> {
+    if path.as_os_str() == "-" {
+        use std::io::Write;
+        std::io::stdout().lock().write_all(content.as_bytes())?;
+        return Ok(());
+    }
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         fs::create_dir_all(parent)?;
     }
