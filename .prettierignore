@@ -1,0 +1,6 @@
+Cargo.lock
+pnpm-lock.yaml
+examples/recorded/**
+target/**
+artifacts/**
+node_modules/**

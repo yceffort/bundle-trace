@@ -1,0 +1,4 @@
+* text=auto eol=lf
+# The recorded coverage contains hashes of these exact bytes.
+examples/recorded/entry.js -text
+examples/recorded/entry.js.map -text
