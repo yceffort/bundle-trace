@@ -61,8 +61,33 @@ Each entry also records the Chrome DevTools Protocol `initiator` type and `start
 
 `coldpath modules --dir DIRECTORY --out MAP_DIRECTORY [--graph FILE]` parses every script with `@babel/parser` and looks for chunk registrations with one function per module:
 
-- webpack: `(self.webpackChunk<name> = ...).push([[chunk ids], {id: factory}])`, including the array form `[factory, ...]`, and webpack 4's default `(this.webpackJsonp = ...).push(...)`. A renamed webpack 4 `jsonpFunction` is not recognized.
-- Turbopack: `(globalThis.TURBOPACK || (globalThis.TURBOPACK = [])).push([currentScript, id, factory, id, factory, ...])`. Checked against the Next.js version pinned in the accuracy corpus; other Turbopack versions may use another layout.
+- webpack chunks: `(self.webpackChunk<name> = ...).push([[chunk ids], modules])`, where `modules` is `{id: factory}`, webpack 5's method shorthand `{id(e, t, n) {...}}`, or the array form `[factory, ...]`, and webpack 4's default `(this.webpackJsonp = ...).push(...)`. A renamed global (webpack 5 `output.chunkLoadingGlobal`, webpack 4 `jsonpFunction`) is recognized when every module in the registration is a function.
+- webpack entry chunks: the runtime keeps entry modules in its own table, `(() => {var e = {id(e, t, n) {...}}; ...})()` in webpack 5 or `!function(e){...}([factories])` in webpack 4. A table counts only when the runtime calls it as `e[id](module, exports, require)`. Its modules share the chunk global the runtime pushes to, so ids resolve across entry and async chunks; a runtime that loads no chunks names them `runtime/<bundle path>`.
+- Turbopack: `(globalThis.TURBOPACK || (globalThis.TURBOPACK = [])).push([currentScript, id, factory, id, factory, ...])`.
+
+### Checked builds
+
+`scripts/verify-recovery.mjs` (part of `pnpm test:corpus`) builds the corpus with source maps, recovers modules while ignoring the maps, and uses the maps as ground truth: each recovered module should contain mapping segments from exactly one original source, no source may own two recovered modules in one chunk, and no original code may sit outside the recovered modules. Measured on 2026-09-25:
+
+| Build | Version | Chunks | Modules | Async loaders | One source | Several sources | No mapped source | Mappings outside modules |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| webpack, object form | 5.111.1 | 3 | 13 | 0 | 13 | 0 | 0 | 0 |
+| webpack, array form (`moduleIds: 'natural'`) | 5.111.1 | 3 | 13 | 0 | 13 | 0 | 0 | 0 |
+| webpack, custom `chunkLoadingGlobal` | 5.111.1 | 3 | 13 | 0 | 13 | 0 | 0 | 0 |
+| webpack, module federation remote | 5.111.1 | 4 | 14 | 0 | 14 | 0 | 0 | 0 |
+| webpack, `concatenateModules` | 5.111.1 | 3 | 10 | 0 | 9 | 1 | 0 | 0 |
+| Next.js Turbopack | 16.3.6 | 7 | 158 | 7 | 143 | 5 | 3 | 0 |
+| Next.js Turbopack | 15.5.25 | 7 | 156 | 7 | 141 | 5 | 3 | 0 |
+
+"Several sources" are merges made by the bundler (module concatenation, Turbopack's scope hoisting), not recovery errors. Async loaders are Turbopack's generated `e.v(...)` stubs, which have no source of their own. The only newer Next.js than 16.3.6 at the time was a canary, so an older release was checked instead.
+
+A public Vite site (`https://vite.dev/`, VitePress, snapshot on 2026-09-25) served 7 scripts (427,049 B) without source maps. `coldpath modules` recovered 0 modules there, as expected for scope-hoisted output, and `--chunks` turned each script into one whole-chunk source; the report showed 216,493 B (51%) not executed on the initial load.
+
+Not recognized, or not checked:
+
+- webpack output wrapped as a library (`output.library` UMD or similar), where the runtime is not a top-level function call.
+- A module federation `remoteEntry.js` holds no module table in the checked build; its exposed modules live in ordinary chunks, which are recognized.
+- webpack 4 is checked only with hand-written fixtures; Rspack and other webpack-compatible bundlers are not checked.
 
 For each chunk it writes a source map in which every module's factory body becomes the source `webpack://inferred/<chunk global>/<module id>.js` with that text as `sourcesContent`. The factory header (`id:(e,t,n)=>` or `id:function(e,t,n)`) is left out.
 
@@ -83,7 +108,7 @@ The graph's `bundler` is `recovered` and it carries a warning saying so. Entries
 
 Limitations:
 
-- Only webpack and Turbopack chunk registrations are recognized. Rollup, Vite, and esbuild hoist modules into one scope per chunk, so their output keeps no module boundaries to recover; `--chunks` can only treat such a chunk as a whole.
+- Only webpack and Turbopack module tables are recognized. Rollup, Vite, and esbuild hoist modules into one scope per chunk, so their output keeps no module boundaries to recover; `--chunks` can only treat such a chunk as a whole.
 - A factory is the smallest unit. Module concatenation (webpack) and scope hoisting merge many original modules into one factory, and those cannot be separated.
 - As with any source map, line terminators and the text between factories are unmapped.
 - Coverage counts a factory's header as observed when its chunk ran, even if the factory itself was never called. Headers are therefore left unmapped: their bytes appear under `[unmapped]`, and a module whose factory never executed has 0 observed bytes. Bundle totals are unchanged.
