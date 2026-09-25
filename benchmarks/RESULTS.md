@@ -2,14 +2,14 @@
 
 This page preserves the original implementation's results. The subsequent [explorer MVP and optimization measurements](MVP.md) record the faster implementation on the same inputs.
 
-On this build, **source-map-explorer was about twice as fast for static analysis of the large mapped bundle set**. bundle-trace used the least memory when generating coverage reports for the 13 observed chunks. Monocart provided the richest test-coverage metrics, but a separate minimal reproduction exposed a generated-byte coverage error in the installed version's comment handling.
+On this build, **source-map-explorer was about twice as fast for static analysis of the large mapped bundle set**. coldpath used the least memory when generating coverage reports for the 13 observed chunks. Monocart provided the richest test-coverage metrics, but a separate minimal reproduction exposed a generated-byte coverage error in the installed version's comment handling.
 
 These results identify different strengths and concrete follow-up work. They do not support a general claim that the Rust tool is faster or that one tool replaces the others.
 
 ## Environment and inputs
 
 - Apple M5, arm64, macOS 27.0; Node.js 24.20.0; Rust 1.95.0, release build.
-- bundle-trace 0.1.0, commit `537b08500d0a0df2f543ebb63460da4ff441d15f`.
+- coldpath 0.1.0, commit `537b08500d0a0df2f543ebb63460da4ff441d15f`.
 - source-map-explorer 2.5.3, resolved `source-map` 0.7.6.
 - monocart-coverage-reports 2.13.0, resolved `monocart-locator` 1.0.3.
 - Locked dependencies are in [pnpm-lock.yaml](pnpm-lock.yaml).
@@ -32,11 +32,11 @@ One warmup plus nine measured fresh processes per task; randomized serial order;
 
 | Tool                                | JSON time | JSON peak RSS | HTML time | HTML peak RSS | HTML size |
 | ----------------------------------- | --------: | ------------: | --------: | ------------: | --------: |
-| bundle-trace                        |   59.2 ms |      76.5 MiB |  297.4 ms |      85.0 MiB | 2,729 KiB |
+| coldpath                        |   59.2 ms |      76.5 MiB |  297.4 ms |      85.0 MiB | 2,729 KiB |
 | source-map-explorer, relaxed bounds |   65.0 ms |     112.3 MiB |   74.2 ms |     120.8 MiB |   185 KiB |
 | Monocart, default source remapping  |  366.8 ms |     300.5 MiB |  414.9 ms |     303.6 MiB | 1,765 KiB |
 
-JSON output sizes were about 203, 90, and 4,582 KiB respectively. bundle-trace's JSON is a summary; Monocart includes detailed source coverage and also computes statement, branch, function, and line metrics. source-map-explorer's HTML is a treemap, while the other two include source inspection. These are observed workflow costs with unequal output features. In particular, the smaller/faster source-map-explorer HTML does less than the code explorers.
+JSON output sizes were about 203, 90, and 4,582 KiB respectively. coldpath's JSON is a summary; Monocart includes detailed source coverage and also computes statement, branch, function, and line metrics. source-map-explorer's HTML is a treemap, while the other two include source inspection. These are observed workflow costs with unequal output features. In particular, the smaller/faster source-map-explorer HTML does less than the code explorers.
 
 All three HTML files opened directly through `file://` in Chromium without page errors or HTTP requests. This was an overview smoke check, not a browser-loading benchmark or comprehensive UI evaluation. Screenshots and the raw check output are under local `artifacts/comparison/ui/`.
 
@@ -44,10 +44,10 @@ All three HTML files opened directly through `file://` in Chromium without page 
 
 | Tool                                | JSON time |  Peak RSS | JSON size |
 | ----------------------------------- | --------: | --------: | --------: |
-| bundle-trace                        |  481.9 ms | 408.0 MiB |   757 KiB |
+| coldpath                        |  481.9 ms | 408.0 MiB |   757 KiB |
 | source-map-explorer, relaxed bounds |  235.3 ms | 377.6 MiB |   325 KiB |
 
-bundle-trace took **2.05× as long** here and used about **8% more peak memory** by the median. This is a concrete weakness to profile before making performance claims. Timing alone does not establish whether interval construction, source-map decoding, allocation, or output processing is responsible. Monocart was not given a fabricated all-executed recording to turn it into a static bundle analyzer.
+coldpath took **2.05× as long** here and used about **8% more peak memory** by the median. This is a concrete weakness to profile before making performance claims. Timing alone does not establish whether interval construction, source-map decoding, allocation, or output processing is responsible. Monocart was not given a fabricated all-executed recording to turn it into a static bundle analyzer.
 
 A subsequent [instrumented investigation](PROFILE.md) measured the hot stages and an isolated allocation-reduction experiment. It explains the static and HTML slowdowns separately without changing the production implementation or the original comparison results.
 
@@ -59,32 +59,32 @@ For the 293-byte fixture's initial recording:
 
 | Tool / view                    | Result                                    | Interpretation                                           |
 | ------------------------------ | ----------------------------------------- | -------------------------------------------------------- |
-| bundle-trace                   | 293 total; 177 observed; 116 unobserved   | Generated UTF-8 bytes, including unmapped regions        |
+| coldpath                   | 293 total; 177 observed; 116 unobserved   | Generated UTF-8 bytes, including unmapped regions        |
 | source-map-explorer, relaxed   | 293 total; 252 mapped; 136 mapped covered | Coverage is attached to mapped source contributions      |
 | Monocart, default              | 406 total; 260 covered                    | Original-source UTF-16 units after source-map conversion |
 | Monocart, generated diagnostic | 281 total; 177 covered; 104 uncovered     | Generated UTF-16 units, with exact source retained       |
 
-bundle-trace also reports **136 observed mapped bytes** on this fixture, agreeing with source-map-explorer on that comparable subset. Its additional 41 observed bytes are unmapped. UTF-8/UTF-16 conversion accounts for the difference between 293 and 281; the generated Monocart result on this fixture is consistent with the native coverage.
+coldpath also reports **136 observed mapped bytes** on this fixture, agreeing with source-map-explorer on that comparable subset. Its additional 41 observed bytes are unmapped. UTF-8/UTF-16 conversion accounts for the difference between 293 and 281; the generated Monocart result on this fixture is consistent with the native coverage.
 
-For the initial-plus-interaction recording, bundle-trace produced 208 observed UTF-8 bytes (204 UTF-16 units); Monocart's generated diagnostic produced 204 covered units. Both tools and source-map-explorer agreed on the fixture quantities that are directly comparable.
+For the initial-plus-interaction recording, coldpath produced 208 observed UTF-8 bytes (204 UTF-16 units); Monocart's generated diagnostic produced 204 covered units. Both tools and source-map-explorer agreed on the fixture quantities that are directly comparable.
 
-On the 13 real scripts, the independent native-range oracle and bundle-trace agreed on **278,485 observed UTF-8 bytes**, **393,540 unobserved bytes**, and **278,325 observed UTF-16 units**. The mapped observed contribution was 275,410 bytes in bundle-trace and 275,406 in source-map-explorer. The 4-byte net difference is not full source-attribution equality: 36 shared source rows differed in size and/or coverage. The tools handle invalid/end-of-line mappings and special regions differently; that per-source difference was recorded, not independently certified as correct for either policy.
+On the 13 real scripts, the independent native-range oracle and coldpath agreed on **278,485 observed UTF-8 bytes**, **393,540 unobserved bytes**, and **278,325 observed UTF-16 units**. The mapped observed contribution was 275,410 bytes in coldpath and 275,406 in source-map-explorer. The 4-byte net difference is not full source-attribution equality: 36 shared source rows differed in size and/or coverage. The tools handle invalid/end-of-line mappings and special regions differently; that per-source difference was recorded, not independently certified as correct for either policy.
 
 ### Strict source-map-explorer failed on these inputs
 
 The default boundary checks rejected the recorded fixture and all 13 observed blog scripts. Errors included an infinite last generated column and finite columns beyond line ends. With the documented `noBorderChecks: true` option, all 13 scripts were reported, with unmapped-byte warnings. Successful timing samples use that explicit fallback, not default settings.
 
-For the complete build, relaxed source-map-explorer returned only **103 of 107 files**: four lacked source maps. The wrapper marks that partial result as failure. The static performance comparison therefore uses the common 103-file mapped set. bundle-trace included all 107 files and kept mapless bytes unmapped.
+For the complete build, relaxed source-map-explorer returned only **103 of 107 files**: four lacked source maps. The wrapper marks that partial result as failure. The static performance comparison therefore uses the common 103-file mapped set. coldpath included all 107 files and kept mapless bytes unmapped.
 
-### Missing recordings remain visible in bundle-trace
+### Missing recordings remain visible in coldpath
 
-Against all 107 files, bundle-trace reported:
+Against all 107 files, coldpath reported:
 
 - 278,485 observed bytes;
 - 393,540 unobserved bytes in recorded scripts;
 - **6,574,051 unmeasured bytes** in scripts without a recording.
 
-Default Monocart uses the recorded entries and expands them to original sources; supplying a directory manifest to this wrapper does not add unrecorded scripts to its report. Its documented `all` option can add untested files, but that creates uncovered coverage rather than bundle-trace's separate unmeasured state. No claim is made that its default report counts the full build.
+Default Monocart uses the recorded entries and expands them to original sources; supplying a directory manifest to this wrapper does not add unrecorded scripts to its report. Its documented `all` option can add untested files, but that creates uncovered coverage rather than coldpath's separate unmeasured state. No claim is made that its default report counts the full build.
 
 ## A reproduced Monocart range-loss issue
 
@@ -96,15 +96,15 @@ This valid 97-code-unit program reproduces the range loss with actual Chromium c
 const label = `${'a/b'.replace(/\//g, '-')}`; globalThis.never = () => { throw Error('never'); };
 ```
 
-The `never` function is created but never called. Native V8 records `[65, 96)` with count zero. bundle-trace and the independent oracle report **66 observed + 31 unobserved bytes**. Monocart's generated diagnostic reports **97 covered + 0 uncovered**.
+The `never` function is created but never called. Native V8 records `[65, 96)` with count zero. coldpath and the independent oracle report **66 observed + 31 unobserved bytes**. Monocart's generated diagnostic reports **97 covered + 0 uncovered**.
 
 The installed `monocart-locator` identifies the `//` inside the escaped-slash regular expression as a line comment spanning `[33, 97)`. Monocart's `fixSourceRange` then moves the uncalled function's start from 65 to 97 while its end remains 96. The invalid interval is discarded. The same issue occurs without the template literal. Replacing the regular-expression call with `replaceAll('/', '-')` restores the expected 31 uncovered units.
 
 The evidence is in [correctness.json](results/correctness.json), including the exact source, native range, detected comment, and adjusted range. [capture-regression.mjs](capture-regression.mjs) recreates the recordings. No installed dependency was patched. The same comment/range adjustment was inspected in an affected real chunk; the entire 98,280-unit aggregate discrepancy was not reduced to individual minimal cases. This is a demonstrated failure in the tested version/dependency combination, not a claim that all Monocart coverage is inaccurate.
 
-## Implications for bundle-trace
+## Implications for coldpath
 
-The useful distinction is explicit accounting for generated UTF-8 bytes, missing measurements, and capture identity, with a standalone offline analyzer. Static size analysis needs performance work. The HTML report is larger and takes longer to generate than source-map-explorer's treemap; its source inspection should justify that extra cost. Monocart's statement/branch/function/line reports remain capabilities bundle-trace does not offer.
+The useful distinction is explicit accounting for generated UTF-8 bytes, missing measurements, and capture identity, with a standalone offline analyzer. Static size analysis needs performance work. The HTML report is larger and takes longer to generate than source-map-explorer's treemap; its source inspection should justify that extra cost. Monocart's statement/branch/function/line reports remain capabilities coldpath does not offer.
 
 Next work supported by this run: profile large static analysis, retain the independent range oracle and this regex case as compatibility evidence, and document the measurement denominator next to comparisons. Multiple applications, bundlers, operating systems, and cold-cache measurements are still needed before broad performance claims.
 

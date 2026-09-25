@@ -190,7 +190,7 @@ pub fn load(
             .with_context(|| format!("read coverage {}", path.display()))?;
         if value.get("schemaVersion").is_some() {
             let file: CoverageFile =
-                serde_json::from_value(value).context("invalid bundle-trace coverage envelope")?;
+                serde_json::from_value(value).context("invalid coldpath coverage envelope")?;
             ensure!(
                 file.schema_version == 1,
                 "unsupported coverage schema version"
@@ -204,7 +204,7 @@ pub fn load(
                 coverage::validate_path(&script.path)?;
                 index.entry(script.path).or_default().push(Observation {
                     scenario: file.scenario.clone(),
-                    format: "bundle-trace",
+                    format: "coldpath",
                     hash: Some(script.sha256),
                     source: None,
                     map_hash: Some(script.source_map_sha256),
@@ -219,7 +219,7 @@ pub fn load(
             entries
         } else {
             bail!(
-                "{}: unsupported coverage format; expected a bundle-trace envelope, V8 {{result:[...]}}, or a DevTools/Playwright array",
+                "{}: unsupported coverage format; expected a coldpath envelope, V8 {{result:[...]}}, or a DevTools/Playwright array",
                 path.display()
             );
         };

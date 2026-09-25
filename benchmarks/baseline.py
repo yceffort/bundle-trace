@@ -19,8 +19,8 @@ def build():
     base = ROOT / 'artifacts/baseline'
     checkout(base / 'source')
     subprocess.run(['cargo', 'build', '--locked', '--release', '--manifest-path', str(base / 'source/Cargo.toml'), '--target-dir', str(base / 'target')], cwd=ROOT, check=True)
-    output = base / 'bundle-trace'
-    shutil.copyfile(base / 'target/release/bundle-trace', output)
+    output = base / 'coldpath'
+    shutil.copyfile(base / 'target/release/coldpath', output)
     output.chmod(0o755)
     return output
 

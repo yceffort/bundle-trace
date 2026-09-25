@@ -40,7 +40,7 @@ pub fn count(name: &'static str, value: usize) {
 }
 pub fn dump() {
     let value = serde_json::json!({"nanoseconds": *TIMES.lock().unwrap(), "counts": *COUNTS.lock().unwrap()});
-    std::fs::write(std::env::var("BUNDLE_TRACE_PROFILE").unwrap(), serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+    std::fs::write(std::env::var("COLDPATH_PROFILE").unwrap(), serde_json::to_vec_pretty(&value).unwrap()).unwrap();
 }
 ''')
     lib = COPY / 'src/lib.rs'
@@ -68,14 +68,14 @@ pub fn dump() {
     replace(report, 'fn embedded_data(id: &str, json: String) -> Result<String> {', 'fn embedded_data(id: &str, json: String) -> Result<String> {\n    let _stage = crate::profile::Stage::new("html_embed_compression_base64");\n    crate::profile::count("html_uncompressed_json_bytes", json.len());')
     main = COPY / 'src/main.rs'
     replace(main, 'fn main() -> Result<()> {', 'fn main() -> Result<()> {\n    let profile_main = std::time::Instant::now();')
-    replace(main, '    let mut report = bundle_trace::analyze_with_options(&args.dir, &args.coverage, &options)?;', '    let stage = bundle_trace::profile::Stage::new("analyze_total");\n    let mut report = bundle_trace::analyze_with_options(&args.dir, &args.coverage, &options)?;\n    drop(stage);')
-    replace(main, '    if let Some(path) = args.html {', '    if let Some(path) = args.html {\n        let _stage = bundle_trace::profile::Stage::new("html_total_and_write");')
-    replace(main, '    if let Some(path) = args.json {', '    if let Some(path) = args.json {\n        let _stage = bundle_trace::profile::Stage::new("json_total_and_write");')
-    replace(main, '\n    Ok(())\n}\n\nfn write_report', '\n    bundle_trace::profile::elapsed("main_total", profile_main);\n    bundle_trace::profile::dump();\n    Ok(())\n}\n\nfn write_report')
+    replace(main, '    let mut report = coldpath::analyze_with_options(&args.dir, &args.coverage, &options)?;', '    let stage = coldpath::profile::Stage::new("analyze_total");\n    let mut report = coldpath::analyze_with_options(&args.dir, &args.coverage, &options)?;\n    drop(stage);')
+    replace(main, '    if let Some(path) = args.html {', '    if let Some(path) = args.html {\n        let _stage = coldpath::profile::Stage::new("html_total_and_write");')
+    replace(main, '    if let Some(path) = args.json {', '    if let Some(path) = args.json {\n        let _stage = coldpath::profile::Stage::new("json_total_and_write");')
+    replace(main, '\n    Ok(())\n}\n\nfn write_report', '\n    coldpath::profile::elapsed("main_total", profile_main);\n    coldpath::profile::dump();\n    Ok(())\n}\n\nfn write_report')
 
 
 def measure(rounds, production):
-    instrumented = BASE / 'target/release/bundle-trace'
+    instrumented = BASE / 'target/release/coldpath'
     rows = []
     rng = random.Random(20260923)
     for index in range(-1, rounds):
@@ -93,7 +93,7 @@ def measure(rounds, production):
             with (output / 'process.log').open('wb') as log:
                 start = time.perf_counter_ns()
                 proc = subprocess.Popen(cmd, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
-                                        env={**os.environ, 'BUNDLE_TRACE_PROFILE': str(output / 'profile.json')})
+                                        env={**os.environ, 'COLDPATH_PROFILE': str(output / 'profile.json')})
                 _, status, usage = os.wait4(proc.pid, 0)
                 elapsed = (time.perf_counter_ns() - start) / 1e6
                 proc.returncode = os.waitstatus_to_exitcode(status)

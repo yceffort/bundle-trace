@@ -1,6 +1,6 @@
 # Explorer MVP and optimized measurements
 
-The explorer now supports JavaScript files/globs, an explicit map for a single file, hierarchical bundle/folder/file treemaps, package grouping, search, sorting, coverage colors, mapped-only view filtering, and HTML/JSON/TSV output. `--treemap` writes a compact offline explorer; `--html` retains the full source/interval inspector. File/glob input without an output option writes `bundle-trace.html`.
+The explorer now supports JavaScript files/globs, an explicit map for a single file, hierarchical bundle/folder/file treemaps, package grouping, search, sorting, coverage colors, mapped-only view filtering, and HTML/JSON/TSV output. `--treemap` writes a compact offline explorer; `--html` retains the full source/interval inspector. File/glob input without an output option writes `coldpath.html`.
 
 This covers the central size-exploration workflow described in [source-map-explorer's documentation](https://github.com/danvk/source-map-explorer). It is not a drop-in CLI/schema replacement. CSS/Sass/LESS, regex path replacement, source-level gzip attribution, and automatic browser opening are not included. The CLI still verifies capture evidence, preserves unmeasured bytes, and supports CI budgets.
 
@@ -27,7 +27,7 @@ source-map-explorer 2.5.3 uses source-map 0.7.6 and the same documented relaxed-
 
 Nine-run medians:
 
-| Input / output                       | Original bundle-trace | Optimized bundle-trace |            source-map-explorer |
+| Input / output                       | Original coldpath | Optimized coldpath |            source-map-explorer |
 | ------------------------------------ | --------------------: | ---------------------: | -----------------------------: |
 | 103 files, static JSON               |             473.39 ms |          **136.44 ms** |                      230.16 ms |
 | 103 files, static treemap HTML       |                     — |          **135.65 ms** |                      257.75 ms |

@@ -69,7 +69,7 @@ for (const path of all) {
     await mkdir(dirname(join(files, mapPath)), {recursive: true})
     await writeFile(join(files, mapPath), map)
   }
-  // Independent point-by-point oracle, not bundle-trace's interval sweep.
+  // Independent point-by-point oracle, not coldpath's interval sweep.
   const used = new Uint8Array(source.length)
   for (const record of records) {
     const points = new Uint8Array(source.length)

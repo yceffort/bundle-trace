@@ -74,7 +74,7 @@ if (tool === 'sme') {
         entry.sourceMap = JSON.parse(await readFile(join(input, 'files', row.mapPath), 'utf8'))
     }
   const report = new CoverageReport({
-    name: 'bundle-trace comparison',
+    name: 'coldpath comparison',
     outputDir: output,
     cleanCache: true,
     // Debug retains the exact generated text and exposes generated-file rows.

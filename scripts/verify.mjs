@@ -111,7 +111,7 @@ execFileSync(
   ['build', '--locked', '--manifest-path', join(root, 'Cargo.toml')],
   {stdio: 'inherit'},
 )
-const binary = join(root, 'target/debug/bundle-trace')
+const binary = join(root, 'target/debug/coldpath')
 let checked = 0
 for (const [name, inputs] of [
   ['static', []],

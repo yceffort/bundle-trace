@@ -7,7 +7,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-src 'self' about:; base-uri 'none'; form-action 'none'"
     />
-    <title>bundle-trace · Bundle explorer</title>
+    <title>coldpath · Bundle explorer</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -501,7 +501,7 @@
       </details>
     </main>
     <script type="application/json" id="report-data">
-      __BUNDLE_TRACE_DATA__
+      __COLDPATH_DATA__
     </script>
     <script>
       ;(() => {
@@ -882,7 +882,7 @@
               frame.id = 'code-frame'
               frame.title = 'Source code inspector'
               frame.setAttribute('sandbox', 'allow-scripts')
-              frame.name = 'bundle-trace:' + JSON.stringify({bundle: focus.bundleIndex, source: focus.sourceIndex, scenario: $('scenario').value})
+              frame.name = 'coldpath:' + JSON.stringify({bundle: focus.bundleIndex, source: focus.sourceIndex, scenario: $('scenario').value})
               frame.srcdoc = report.inspectorHtml
               $('file').append(element('p', 'Choose a scenario in the inspector to see its executed and unexecuted ranges.'), frame)
             } else $('file').append(element('p', 'Generate with --details to include the code inspector.'))

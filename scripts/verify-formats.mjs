@@ -11,7 +11,7 @@ import {chromium} from '@playwright/test'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const artifacts = join(root, 'artifacts', 'formats')
 const fixture = join(root, 'examples', 'recorded')
-const binary = join(root, 'target', 'debug', 'bundle-trace')
+const binary = join(root, 'target', 'debug', 'coldpath')
 await mkdir(artifacts, {recursive: true})
 execFileSync(
   'cargo',

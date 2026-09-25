@@ -1,15 +1,15 @@
 # Usage guide
 
-Run `bundle-trace --help` for the complete CLI. All paths in the examples are relative to your current working directory.
+Run `coldpath --help` for the complete CLI. All paths in the examples are relative to your current working directory.
 
 ## Files, globs, and output
 
 ```sh
-bundle-trace dist/app.js --treemap artifacts/size.html
-bundle-trace 'dist/**/*.js' --json artifacts/size.json --tsv artifacts/size.tsv
-bundle-trace dist/app.js /path/to/custom.map --treemap artifacts/size.html
-bundle-trace --dir dist --treemap artifacts/all.html
-bundle-trace --dir dist 'dist/assets/*.js' --coverage chrome.json --url-prefix https://example.com/ --json artifacts/coverage.json
+coldpath dist/app.js --treemap artifacts/size.html
+coldpath 'dist/**/*.js' --json artifacts/size.json --tsv artifacts/size.tsv
+coldpath dist/app.js /path/to/custom.map --treemap artifacts/size.html
+coldpath --dir dist --treemap artifacts/all.html
+coldpath --dir dist 'dist/assets/*.js' --coverage chrome.json --url-prefix https://example.com/ --json artifacts/coverage.json
 ```
 
 Use file/glob inputs to select bundles, or `--dir` alone to scan a directory recursively. Combine them to select bundles under a fixed analysis root. File/glob inputs remain relative to the current working directory, not to `--dir`. Quote globs to expand them consistently inside the CLI. Repeated files are deduplicated; unmatched patterns and unsupported file types fail. `.js`, `.mjs`, and `.cjs` are supported. A single JavaScript file can be followed by one explicit map; multiple adjacent `file.js.map` inputs pair with their JavaScript files. For other multi-file map bindings, use repeated `--map`.
@@ -18,7 +18,7 @@ Use file/glob inputs to select bundles, or `--dir` alone to scan a directory rec
 
 With file/glob inputs, coverage for unselected files that exist inside the analysis root is skipped with a warning. Coverage paths missing from the root still fail, so a wrong URL prefix is not silently ignored. Selected files retain source/hash, map, and range verification; files absent from the recording remain unmeasured. To analyze only `dist/assets/app.js` from a recording containing `https://example.com/assets/*.js`, use `--dir dist dist/assets/app.js --url-prefix https://example.com/` with the coverage/output options.
 
-File/glob input with no output option writes a compact `bundle-trace.html` to the current directory, replacing any existing file. After a successful default write, the CLI prints `Wrote bundle-trace.html`. No browser launches automatically. Use `-` as the output path for stdout, for example `--json -` or `--tsv -`; diagnostics then go to stderr. At most one output can target stdout. File outputs can be combined.
+File/glob input with no output option writes a compact `coldpath.html` to the current directory, replacing any existing file. After a successful default write, the CLI prints `Wrote coldpath.html`. No browser launches automatically. Use `-` as the output path for stdout, for example `--json -` or `--tsv -`; diagnostics then go to stderr. At most one output can target stdout. File outputs can be combined.
 
 TSV aggregates contributions by original source across selected bundles. Columns are `Source`, `Bytes`, `Observed`, `Unobserved`, and `Unmeasured`. In source names, backslashes, tabs, CR, and LF are escaped as `\\`, `\t`, `\r`, and `\n` so each source occupies one row.
 
@@ -29,7 +29,7 @@ TSV aggregates contributions by original source across selected bundles. Columns
 Supported map inputs include ordinary v3 maps, indexed maps with embedded sections, and base64 or percent-encoded `data:application/json` maps. `sourcesContent` is optional. Explicit overrides take precedence over comments:
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --map chunks/app.js=/path/to/private/app.map \
   --html artifacts/report.html
 ```
@@ -56,7 +56,7 @@ The format is detected automatically:
 ### URL mapping
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --coverage playwright.json \
   --url-prefix https://example.com/assets/ \
   --html artifacts/report.html
@@ -80,7 +80,7 @@ Explicit mappings take precedence over prefixes. Relative bundle paths cannot co
 NODE_V8_COVERAGE=artifacts/node-coverage node dist/server.js
 
 # Replace the filename with the one Node generated.
-bundle-trace --dir dist \
+coldpath --dir dist \
   --coverage artifacts/node-coverage/coverage-123.json \
   --allow-unverified --html artifacts/node.html
 ```
@@ -119,7 +119,7 @@ Each recording resolves nested ranges before observations are unioned. Child ran
 ## Reports
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --coverage initial.json --coverage interaction.json \
   --html artifacts/report.html \
   --json artifacts/summary.json \
@@ -139,7 +139,7 @@ Inspector HTML stores details by chunk and decodes them on demand. Blocks larger
 ### Scenarios and execution phases
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --coverage initial.json --coverage open-report.json \
   --initial-scenario initial \
   --treemap artifacts/scenarios.html --details \
@@ -162,10 +162,10 @@ Click a source to see import chains, available line/column evidence, isolated co
 
 ```sh
 # Generate main.json on the base build using the same root and selection rules.
-bundle-trace --dir dist --json artifacts/main.json
+coldpath --dir dist --json artifacts/main.json
 
 # Run on the PR build.
-bundle-trace --dir dist --baseline artifacts/main.json \
+coldpath --dir dist --baseline artifacts/main.json \
   --max-added-bytes 10000 \
   --json artifacts/pr.json --markdown artifacts/pr.md --treemap artifacts/pr.html
 ```
@@ -183,7 +183,7 @@ The explorer supports JavaScript files/globs, hierarchical treemaps, source/pack
 ## Filters, compression, and budgets
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --include '**/*.js' --exclude 'vendor/**' \
   --compression --max-bytes 1000000 \
   --json artifacts/report.json --markdown artifacts/summary.md
@@ -223,7 +223,7 @@ Success exits `0`; input or analysis failure exits `1`; budget failure exits `2`
 Pass an esbuild metafile from the same build:
 
 ```sh
-bundle-trace --dir dist --metafile meta.json --why src/feature.ts
+coldpath --dir dist --metafile meta.json --why src/feature.ts
 ```
 
 `--why` uses the exact esbuild input key. The analyzer reports one shortest path through the input graph and records paths in JSON's `importPaths`. Metafile `bytesInOutput` and source-map attributed bytes have different definitions. Metafiles are not hash-verified; retain the correct one with the build.

@@ -20,17 +20,17 @@ os.chdir(root)
 base = Path('artifacts/comparison')
 jobs = []
 for mode in ['json', 'html']:
-    for tool in ['bundle-trace', 'sme', 'monocart']:
+    for tool in ['coldpath', 'sme', 'monocart']:
         jobs.append(dict(dataset='blog-measured', tool=tool, mode=mode))
-for tool in ['bundle-trace', 'sme']:
+for tool in ['coldpath', 'sme']:
     jobs.append(dict(dataset='blog-mapped', tool=tool, mode='static'))
 
 def command(job, output):
     dataset = base / 'inputs' / job['dataset']
-    if job['tool'] != 'bundle-trace':
+    if job['tool'] != 'coldpath':
         return [args.node, 'benchmarks/run-tool.mjs', job['tool'], str(dataset), str(output),
                 job['mode'], 'relaxed' if job['tool'] == 'sme' else 'default']
-    cmd = ['target/release/bundle-trace', '--dir', str(dataset / 'files')]
+    cmd = ['target/release/coldpath', '--dir', str(dataset / 'files')]
     if job['mode'] != 'static':
         cmd += ['--coverage', str(dataset / 'playwright.json'), '--url-prefix', 'https://comparison.invalid/']
     cmd += ['--html' if job['mode'] == 'html' else '--json', str(output / ('index.html' if job['mode'] == 'html' else 'report.json'))]
@@ -82,8 +82,8 @@ metadata={
     'node':subprocess.check_output([args.node,'--version'],text=True).strip(),
     'rust':subprocess.check_output(['rustc','--version'],text=True).strip(),
     'bundleTraceCommit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
-    'bundleTraceBinarySha256':hashlib.sha256(Path('target/release/bundle-trace').read_bytes()).hexdigest(),
-    'tools':{'bundle-trace':'0.1.0','source-map-explorer':'2.5.3','monocart-coverage-reports':'2.13.0'},
+    'bundleTraceBinarySha256':hashlib.sha256(Path('target/release/coldpath').read_bytes()).hexdigest(),
+    'tools':{'coldpath':'0.1.0','source-map-explorer':'2.5.3','monocart-coverage-reports':'2.13.0'},
     'rounds':args.rounds, 'warmupsPerJob':1, 'shuffleSeed':20260923,
     'method':'Fresh serial processes, warm filesystem cache, wall clock including startup and report writing, wait4 per-child peak RSS. Input conversion/build/install/browser capture excluded. HTML means one self-contained file; JSON schemas and report features differ.',
     'summary':summaries,

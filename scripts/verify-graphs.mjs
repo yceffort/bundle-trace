@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {enrichLocations, importSites, webpackGraph, turbopackGraph} from '../lib/graph.mjs'
 
-const root = await mkdtemp(join(tmpdir(), 'bundle-trace-graphs-'))
+const root = await mkdtemp(join(tmpdir(), 'coldpath-graphs-'))
 try {
   const code = "import {draw} from './chart.js';\n\ndraw();\n"
   await writeFile(join(root, 'entry.js'), code)

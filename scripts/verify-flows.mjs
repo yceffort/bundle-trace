@@ -15,7 +15,7 @@ const artifacts = join(root, 'artifacts', 'flows')
 await rm(artifacts, {recursive: true, force: true})
 await mkdir(artifacts, {recursive: true})
 execFileSync('cargo', ['build', '--locked'], {cwd: root, stdio: 'inherit'})
-const binary = join(root, 'target', 'debug', 'bundle-trace')
+const binary = join(root, 'target', 'debug', 'coldpath')
 
 const listen = async (handler) => {
   const server = createServer(handler)

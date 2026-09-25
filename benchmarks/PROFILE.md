@@ -8,7 +8,7 @@ The largest static-analysis costs are materializing mappings and aggregating the
 
 ## Measurement
 
-`profile.py` copies the source into ignored `artifacts/profiling/source/`, adds coarse stage timers, and builds with the existing release profile. It leaves production source files and `target/release/bundle-trace` intact. There is no per-mapping timer. Each task has one warmup and nine measured fresh processes, randomized and serial. Filesystem caches are warm. The timer dump happens after the internal total timer; process wall time includes it.
+`profile.py` copies the source into ignored `artifacts/profiling/source/`, adds coarse stage timers, and builds with the existing release profile. It leaves production source files and `target/release/coldpath` intact. There is no per-mapping timer. Each task has one warmup and nine measured fresh processes, randomized and serial. Filesystem caches are warm. The timer dump happens after the internal total timer; process wall time includes it.
 
 Production and instrumented static medians were **483.18 ms and 482.90 ms**. Coverage HTML medians were **298.14 ms and 298.76 ms**. Every instrumented JSON/HTML file was byte-identical to the corresponding production output, including warmups: 20 pairs. This bounds the instrumentation's wall-time perturbation on these inputs; it is not an instruction-level CPU or allocation profile. Instrumented HTML peak RSS was approximately 5 MiB higher, so memory overhead was not zero.
 

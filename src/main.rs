@@ -116,7 +116,7 @@ fn main() -> Result<()> {
         && args.tsv.is_none()
         && args.markdown.is_none();
     if default_treemap {
-        args.treemap = Some(PathBuf::from("bundle-trace.html"));
+        args.treemap = Some(PathBuf::from("coldpath.html"));
     }
     let stdout_count = [
         &args.json,
@@ -136,7 +136,7 @@ fn main() -> Result<()> {
     let selection = if args.inputs.is_empty() {
         None
     } else {
-        Some(bundle_trace::selection::resolve(
+        Some(coldpath::selection::resolve(
             &args.inputs,
             args.dir.as_deref(),
         )?)
@@ -146,12 +146,12 @@ fn main() -> Result<()> {
         .map(|s| s.root.clone())
         .or(args.dir)
         .unwrap();
-    let mut config: bundle_trace::ci::Config = if let Some(path) = &args.config {
+    let mut config: coldpath::ci::Config = if let Some(path) = &args.config {
         serde_json::from_slice(&fs::read(path)?).context("invalid --config")?
     } else {
         Default::default()
     };
-    let mut options = bundle_trace::AnalyzeOptions {
+    let mut options = coldpath::AnalyzeOptions {
         initial_scenario: args.initial_scenario,
         scenario_order: args.scenario_order,
         source_compression: args.source_compression,
@@ -194,9 +194,9 @@ fn main() -> Result<()> {
             "duplicate --map for {bundle}"
         );
     }
-    let mut report = bundle_trace::analyze_with_options(&dir, &args.coverage, &options)?;
+    let mut report = coldpath::analyze_with_options(&dir, &args.coverage, &options)?;
     if let Some(path) = args.baseline {
-        let comparison = bundle_trace::baseline::compare(&report, &fs::read(&path)?)
+        let comparison = coldpath::baseline::compare(&report, &fs::read(&path)?)
             .with_context(|| format!("compare baseline {}", path.display()))?;
         report.warnings.extend(comparison.warnings.iter().cloned());
         report.baseline = Some(comparison);
@@ -233,8 +233,8 @@ fn main() -> Result<()> {
         ));
     }
     if let Some(path) = args.metafile {
-        let mut paths = bundle_trace::metadata::import_paths(&fs::read(path)?)?;
-        bundle_trace::metadata::bind_sources(
+        let mut paths = coldpath::metadata::import_paths(&fs::read(path)?)?;
+        coldpath::metadata::bind_sources(
             &mut paths,
             &dir,
             &args.metafile_root.unwrap_or(std::env::current_dir()?),
@@ -242,14 +242,14 @@ fn main() -> Result<()> {
         report.import_paths = Some(paths);
     }
     if let Some(path) = args.graph {
-        bundle_trace::graph::attach(
+        coldpath::graph::attach(
             &mut report,
             &fs::read(path)?,
             &dir,
             &args.graph_root.unwrap_or(std::env::current_dir()?),
         )?;
     }
-    report.recommendations = bundle_trace::recommendations::build(&report);
+    report.recommendations = coldpath::recommendations::build(&report);
     ensure!(
         args.why.is_none() || report.import_paths.is_some(),
         "--why requires --graph or --metafile"
@@ -363,19 +363,19 @@ fn main() -> Result<()> {
         eprintln!("warning: {warning}");
     }
     if let Some(path) = args.html {
-        write_report(path, bundle_trace::report::html(&report)?)?;
+        write_report(path, coldpath::report::html(&report)?)?;
     }
     if let Some(path) = args.treemap {
         write_report(
             path.clone(),
-            bundle_trace::report::treemap_with_inspector(&report, args.details)?,
+            coldpath::report::treemap_with_inspector(&report, args.details)?,
         )?;
         if default_treemap {
             status!("Wrote {}", path.display());
         }
     }
     if let Some(path) = args.tsv {
-        write_report(path, bundle_trace::report::tsv(&report))?;
+        write_report(path, coldpath::report::tsv(&report))?;
     }
     if !args.details {
         report.strip_details();
@@ -384,7 +384,7 @@ fn main() -> Result<()> {
         write_report(path, serde_json::to_string(&report)? + "\n")?;
     }
     if let Some(path) = args.markdown {
-        write_report(path, bundle_trace::ci::markdown(&report))?;
+        write_report(path, coldpath::ci::markdown(&report))?;
     }
     if !report.budget_failures.is_empty() {
         for failure in &report.budget_failures {

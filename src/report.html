@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
-  <title>bundle-trace · Coverage report</title>
+  <title>coldpath · Coverage report</title>
   <style>
     :root {
       color-scheme: light;
@@ -215,7 +215,7 @@
 <body>
 <main>
   <header>
-    <div><div class="eyebrow">BUNDLE TRACE</div><h1>Bundle coverage</h1></div>
+    <div><div class="eyebrow">COLDPATH</div><h1>Bundle coverage</h1></div>
     <div class="header-tools"><span class="muted" id="meta"></span><select id="theme" aria-label="Color theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
   </header>
   <p class="intro">Follow unobserved code back to its source.</p>
@@ -290,7 +290,7 @@
     <details><summary id="warnings-title">Analysis details and warnings</summary><div id="scenarios"></div><ul id="warnings"></ul></details>
   </section>
 </main>
-__BUNDLE_TRACE_PAYLOADS__
+__COLDPATH_PAYLOADS__
 <script>
 (async () => {
   'use strict';
@@ -663,8 +663,8 @@ __BUNDLE_TRACE_PAYLOADS__
   $('map-details').ontoggle = renderMap;
   window.addEventListener('resize', () => { renderMap(); scrollOriginal(); });
   render();
-  if (window.name.startsWith('bundle-trace:')) {
-    const selection = JSON.parse(window.name.slice('bundle-trace:'.length));
+  if (window.name.startsWith('coldpath:')) {
+    const selection = JSON.parse(window.name.slice('coldpath:'.length));
     if (Number.isInteger(selection.bundle) && Number.isInteger(selection.source)
         && report.bundles[selection.bundle]?.sources[selection.source]) {
       state.bundle = selection.bundle;
@@ -679,7 +679,7 @@ __BUNDLE_TRACE_PAYLOADS__
       $('inspector').scrollIntoView({block: 'start'});
     }
   }
-  performance.mark('bundle-trace:overview');
+  performance.mark('coldpath:overview');
 })().catch(error => { document.getElementById('meta').textContent = 'Could not open the report: ' + error.message; });
 </script>
 </body>

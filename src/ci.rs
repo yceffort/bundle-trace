@@ -128,7 +128,7 @@ fn compressed_streams(data: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
 
 pub fn markdown(report: &Report) -> String {
     let mut out = format!(
-        "# bundle-trace\n\nGenerated UTF-8 bytes: **{}** across {} selected bundles.\n\n| Observed | Unobserved | Unmeasured |\n| ---: | ---: | ---: |\n| {} B | {} B | {} B |\n\nUnobserved means not executed during the supplied scenarios, not safe to delete.\n",
+        "# coldpath\n\nGenerated UTF-8 bytes: **{}** across {} selected bundles.\n\n| Observed | Unobserved | Unmeasured |\n| ---: | ---: | ---: |\n| {} B | {} B | {} B |\n\nUnobserved means not executed during the supplied scenarios, not safe to delete.\n",
         report.totals.bytes,
         report.bundles.len(),
         report.totals.observed_bytes,

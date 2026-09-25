@@ -4,7 +4,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-use bundle_trace::{
+use coldpath::{
     analyze, attribution,
     coverage::{self, CoverageRange, FunctionCoverage, Interval},
     metadata, sha256,
@@ -17,7 +17,7 @@ struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
         let dir = std::env::temp_dir().join(format!(
-            "bundle-trace-test-{}-{}",
+            "coldpath-test-{}-{}",
             std::process::id(),
             NEXT_DIR.fetch_add(1, Ordering::Relaxed)
         ));
@@ -243,13 +243,13 @@ fn scenario_breakdown_uses_range_differences_and_preserves_missing_recordings() 
         {"path":"app.js","sha256":sha256(source.as_bytes()),"sourceMapSha256":sha256(&fs::read(fixture.0.join("app.js.map")).unwrap()),"functions":[{"isBlockCoverage":true,"ranges":[{"startOffset":1,"endOffset":5,"count":1}]}]},
         {"path":"lazy.js","sha256":sha256(b"later"),"sourceMapSha256":null,"functions":[{"isBlockCoverage":true,"ranges":[{"startOffset":0,"endOffset":5,"count":1}]}]}
     ]}).to_string());
-    let mut options = bundle_trace::AnalyzeOptions {
+    let mut options = coldpath::AnalyzeOptions {
         initial_scenario: Some("initial".into()),
         ..Default::default()
     };
     for details in [true, false] {
         options.details = details;
-        let report = bundle_trace::analyze_with_options(
+        let report = coldpath::analyze_with_options(
             &fixture.0,
             &[initial.clone(), interaction.clone(), interaction.clone()],
             &options,
@@ -323,7 +323,7 @@ fn scenario_breakdown_uses_range_differences_and_preserves_missing_recordings() 
     }
     options.initial_scenario = Some("missing".into());
     assert!(
-        bundle_trace::analyze_with_options(&fixture.0, &[initial, interaction], &options)
+        coldpath::analyze_with_options(&fixture.0, &[initial, interaction], &options)
             .unwrap_err()
             .to_string()
             .contains("unknown initial scenario")
@@ -359,7 +359,7 @@ fn baseline_compares_normalized_sources_additions_removals_and_scenarios() {
     let old = analyze(&before.0, &[before.0.join("initial.json")]).unwrap();
     let new = analyze(&after.0, &[after.0.join("initial.json")]).unwrap();
     let data = serde_json::to_vec(&old).unwrap();
-    let comparison = bundle_trace::baseline::compare(&new, &data).unwrap();
+    let comparison = coldpath::baseline::compare(&new, &data).unwrap();
     assert_eq!(comparison.totals.delta.bytes, 2);
     let row = |name: &str| comparison.sources.iter().find(|r| r.name == name).unwrap();
     assert_eq!(row("src/keep.js").delta.bytes, 2);
@@ -384,7 +384,7 @@ fn baseline_compares_normalized_sources_additions_removals_and_scenarios() {
         comparison.totals.delta.bytes
     );
     assert!(
-        bundle_trace::baseline::compare(&new, br#"{"schemaVersion":2}"#)
+        coldpath::baseline::compare(&new, br#"{"schemaVersion":2}"#)
             .unwrap_err()
             .to_string()
             .contains("regenerate")
@@ -393,7 +393,7 @@ fn baseline_compares_normalized_sources_additions_removals_and_scenarios() {
     let duplicate = invalid["sources"][0].clone();
     invalid["sources"].as_array_mut().unwrap().push(duplicate);
     assert!(
-        bundle_trace::baseline::compare(&new, &serde_json::to_vec(&invalid).unwrap())
+        coldpath::baseline::compare(&new, &serde_json::to_vec(&invalid).unwrap())
             .unwrap_err()
             .to_string()
             .contains("duplicate")
@@ -402,7 +402,7 @@ fn baseline_compares_normalized_sources_additions_removals_and_scenarios() {
     different["scenarios"] = json!(["other"]);
     different["scenarioReports"] = json!([]);
     let comparison =
-        bundle_trace::baseline::compare(&new, &serde_json::to_vec(&different).unwrap()).unwrap();
+        coldpath::baseline::compare(&new, &serde_json::to_vec(&different).unwrap()).unwrap();
     assert!(comparison.scenarios.is_empty());
     assert!(!comparison.warnings.is_empty());
 }
@@ -415,7 +415,7 @@ fn baseline_growth_budget_writes_reports_and_exits_two() {
     fixture.write("main.json", &serde_json::to_string(&report).unwrap());
     fixture.write("app.js", "123456");
     let run = |limit| {
-        std::process::Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+        std::process::Command::new(env!("CARGO_BIN_EXE_coldpath"))
             .current_dir(&fixture.0)
             .args([
                 "--dir",
@@ -466,7 +466,7 @@ fn initial_regression_budget_rejects_growth_and_missing_measurements() {
         json!([{"startOffset":0,"endOffset":2,"count":1}]),
     );
     let run = |limit| {
-        std::process::Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+        std::process::Command::new(env!("CARGO_BIN_EXE_coldpath"))
             .current_dir(&fixture.0)
             .args([
                 "--dir",
@@ -764,7 +764,7 @@ fn standard_formats_agree_and_preserve_capture_evidence() {
         {"startOffset":1,"endOffset":3,"count":0}
     ]}]);
     let url = "https://cdn.test/assets/app.js?v=1";
-    let mut options = bundle_trace::AnalyzeOptions::default();
+    let mut options = coldpath::AnalyzeOptions::default();
     options
         .input
         .url_prefixes
@@ -789,18 +789,14 @@ fn standard_formats_agree_and_preserve_capture_evidence() {
         let path = fixture.write(name, &value.to_string());
         if name == "v8.json" {
             assert!(
-                bundle_trace::analyze_with_options(
-                    &fixture.0,
-                    std::slice::from_ref(&path),
-                    &options
-                )
-                .unwrap_err()
-                .to_string()
-                .contains("--allow-unverified")
+                coldpath::analyze_with_options(&fixture.0, std::slice::from_ref(&path), &options)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("--allow-unverified")
             );
             options.input.allow_unverified = true;
         }
-        let report = bundle_trace::analyze_with_options(&fixture.0, &[path], &options).unwrap();
+        let report = coldpath::analyze_with_options(&fixture.0, &[path], &options).unwrap();
         assert_eq!(report.totals.observed_bytes, 4);
         assert_eq!(report.totals.unobserved_bytes, 4);
         let bundle = &report.bundles[0];
@@ -816,7 +812,7 @@ fn standard_formats_agree_and_preserve_capture_evidence() {
         );
         assert_eq!(bundle.sources[0].content.as_deref(), Some("original"));
         assert_eq!(bundle.spans[1].original.as_ref().unwrap().line, 0);
-        assert_eq!(bundle.spans[1].status, bundle_trace::Status::Unobserved);
+        assert_eq!(bundle.spans[1].status, coldpath::Status::Unobserved);
     }
 }
 
@@ -863,16 +859,16 @@ fn inline_maps_and_explicit_external_maps() {
         "app.js",
         "abc\n//# sourceMappingURL=https://private.test/map",
     );
-    let mut options = bundle_trace::AnalyzeOptions::default();
+    let mut options = coldpath::AnalyzeOptions::default();
     options
         .maps
         .insert("app.js".into(), external.write("external.map", map));
-    let report = bundle_trace::analyze_with_options(&fixture.0, &[], &options).unwrap();
+    let report = coldpath::analyze_with_options(&fixture.0, &[], &options).unwrap();
     assert_eq!(report.bundles[0].mapped_bytes, 3);
     options
         .maps
         .insert("missing.js".into(), external.0.join("external.map"));
-    assert!(bundle_trace::analyze_with_options(&fixture.0, &[], &options).is_err());
+    assert!(coldpath::analyze_with_options(&fixture.0, &[], &options).is_err());
 }
 
 #[test]
@@ -902,7 +898,7 @@ fn source_paths_merge_across_chunk_depths_and_keep_distinct_files() {
         assert_eq!(report.sources[0].source, expected);
         assert_eq!(report.sources[0].counts.bytes, 16);
         assert_eq!(report.sources[1].counts.bytes, 8);
-        assert!(bundle_trace::report::tsv(&report).contains(&format!("{expected}\t16\t")));
+        assert!(coldpath::report::tsv(&report).contains(&format!("{expected}\t16\t")));
         assert_eq!(report.bundles[0].sources[0].source, expected);
         assert_eq!(report.bundles[1].sources[0].source, expected);
     }
@@ -928,9 +924,9 @@ fn source_paths_use_map_location_source_root_and_inline_bundle_location() {
         "dist/sub/c.js",
         &format!("12345678\n//# sourceMappingURL=data:application/json;base64,{inline}"),
     );
-    let mut options = bundle_trace::AnalyzeOptions::default();
+    let mut options = coldpath::AnalyzeOptions::default();
     options.maps.insert("dist/sub/b.js".into(), explicit);
-    let report = bundle_trace::analyze_with_options(&fixture.0, &[], &options).unwrap();
+    let report = coldpath::analyze_with_options(&fixture.0, &[], &options).unwrap();
     let row = report
         .sources
         .iter()
@@ -943,8 +939,7 @@ fn source_paths_use_map_location_source_root_and_inline_bundle_location() {
         ("a.js".into(), fixture.0.join("maps/a.map")),
         ("sub/b.js".into(), fixture.0.join("maps/b.map")),
     ]);
-    let report =
-        bundle_trace::analyze_with_options(&fixture.0.join("dist"), &[], &options).unwrap();
+    let report = coldpath::analyze_with_options(&fixture.0.join("dist"), &[], &options).unwrap();
     assert_eq!(
         report
             .sources
@@ -998,13 +993,13 @@ fn url_mapping_is_explicit_and_rejects_traversal() {
         &json!([{"url":"https://cdn.test/app.js","text":"abcd","ranges":[]}]).to_string(),
     );
     assert!(analyze(&fixture.0, std::slice::from_ref(&path)).is_err());
-    let mut options = bundle_trace::AnalyzeOptions::default();
+    let mut options = coldpath::AnalyzeOptions::default();
     options
         .input
         .script_paths
         .insert("https://cdn.test/app.js".into(), "app.js".into());
     assert_eq!(
-        bundle_trace::analyze_with_options(&fixture.0, &[path], &options)
+        coldpath::analyze_with_options(&fixture.0, &[path], &options)
             .unwrap()
             .totals
             .unobserved_bytes,
@@ -1020,7 +1015,7 @@ fn url_mapping_is_explicit_and_rejects_traversal() {
             "input.json",
             &json!([{"url":url,"text":"abcd","ranges":[]}]).to_string(),
         );
-        assert!(bundle_trace::analyze_with_options(&fixture.0, &[path], &options).is_err());
+        assert!(coldpath::analyze_with_options(&fixture.0, &[path], &options).is_err());
     }
 }
 
@@ -1080,7 +1075,7 @@ fn detail_spans_partition_every_bundle_and_source() {
             assert_eq!(
                 spans
                     .iter()
-                    .filter(|s| s.status == bundle_trace::Status::Observed)
+                    .filter(|s| s.status == coldpath::Status::Observed)
                     .map(|s| s.end - s.start)
                     .sum::<usize>(),
                 source.counts.observed_bytes
@@ -1101,7 +1096,7 @@ fn html_does_not_turn_source_into_markup() {
     let payload = "</script><script>globalThis.injected=true</script>🔥";
     fixture.write("app.js", payload);
     let report = analyze(&fixture.0, &[]).unwrap();
-    let html = bundle_trace::report::html(&report).unwrap();
+    let html = coldpath::report::html(&report).unwrap();
     assert!(!html.contains(payload));
     let data = html
         .split("id=\"report-data\">")
@@ -1135,30 +1130,30 @@ fn filters_change_denominator_and_do_not_hide_missing_files() {
         "abcd",
         json!([{"startOffset":0,"endOffset":4,"count":1}]),
     );
-    let mut options = bundle_trace::AnalyzeOptions::default();
+    let mut options = coldpath::AnalyzeOptions::default();
     options.include.push("**/*.js".into());
     options.exclude.push("app.js".into());
     let report =
-        bundle_trace::analyze_with_options(&fixture.0, std::slice::from_ref(&coverage), &options)
+        coldpath::analyze_with_options(&fixture.0, std::slice::from_ref(&coverage), &options)
             .unwrap();
     assert_eq!(report.totals.bytes, 5);
     assert_eq!(report.totals.unmeasured_bytes, 5);
     assert_eq!(report.excluded_bundles, vec!["app.js"]);
     assert_eq!(
         report.bundles[0].spans[0].status,
-        bundle_trace::Status::Unmeasured
+        coldpath::Status::Unmeasured
     );
     fs::remove_file(fixture.0.join("app.js")).unwrap();
     assert!(
-        bundle_trace::analyze_with_options(&fixture.0, &[coverage], &options)
+        coldpath::analyze_with_options(&fixture.0, &[coverage], &options)
             .unwrap_err()
             .to_string()
             .contains("missing from analysis root")
     );
     options.exclude.push("**/*.js".into());
-    assert!(bundle_trace::analyze_with_options(&fixture.0, &[], &options).is_err());
+    assert!(coldpath::analyze_with_options(&fixture.0, &[], &options).is_err());
     options.include = vec!["[".into()];
-    assert!(bundle_trace::analyze_with_options(&fixture.0, &[], &options).is_err());
+    assert!(coldpath::analyze_with_options(&fixture.0, &[], &options).is_err());
 }
 
 #[test]
@@ -1167,7 +1162,7 @@ fn ci_reports_are_written_even_when_budget_fails() {
     let fixture = Fixture::new();
     fixture.write("app.js", "abcd");
     let config = fixture.write("config.json", r#"{"include":["**/*.js"],"compression":true,"budgets":{"maxBytes":3,"maxUnmeasuredBytes":0}}"#);
-    let output = Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+    let output = Command::new(env!("CARGO_BIN_EXE_coldpath"))
         .args([
             "--dir",
             fixture.0.to_str().unwrap(),
@@ -1193,7 +1188,7 @@ fn ci_reports_are_written_even_when_budget_fails() {
             .contains("Budget failed")
     );
     assert!(fixture.0.join("report.html").exists());
-    let output = Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+    let output = Command::new(env!("CARGO_BIN_EXE_coldpath"))
         .args([
             "--dir",
             fixture.0.to_str().unwrap(),
@@ -1214,7 +1209,7 @@ fn budget_does_not_confuse_unmeasured_with_unobserved() {
     let fixture = Fixture::new();
     fixture.write("app.js", "abcd");
     let report = analyze(&fixture.0, &[]).unwrap();
-    let config: bundle_trace::ci::Config =
+    let config: coldpath::ci::Config =
         serde_json::from_str(r#"{"budgets":{"maxUnobservedBytes":0,"maxUnmeasuredBytes":0}}"#)
             .unwrap();
     let failures = config.budgets.check(&report);
@@ -1229,9 +1224,7 @@ fn budget_does_not_confuse_unmeasured_with_unobserved() {
             .iter()
             .any(|failure| failure.starts_with("unmeasured"))
     );
-    assert!(
-        serde_json::from_str::<bundle_trace::ci::Config>(r#"{"budgets":{"maxByte":4}}"#).is_err()
-    );
+    assert!(serde_json::from_str::<coldpath::ci::Config>(r#"{"budgets":{"maxByte":4}}"#).is_err());
 }
 
 #[test]
@@ -1242,7 +1235,7 @@ fn summary_json_and_detailed_json_have_identical_counts() {
     let mut totals = Vec::new();
     for details in [false, true] {
         let output = fixture.0.join("report.json");
-        let mut command = Command::new(env!("CARGO_BIN_EXE_bundle-trace"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_coldpath"));
         command.args([
             "--dir",
             fixture.0.to_str().unwrap(),
@@ -1311,7 +1304,7 @@ fn cli_selects_files_globs_and_explicit_maps_and_exports_stdout() {
     fixture.write("b.js", "xyz");
     fixture.write("other.cjs", "ignored");
     let run = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+        Command::new(env!("CARGO_BIN_EXE_coldpath"))
             .current_dir(&fixture.0)
             .args(args)
             .output()
@@ -1344,13 +1337,13 @@ fn cli_selects_files_globs_and_explicit_maps_and_exports_stdout() {
     assert!(run(&["--dir", ".", "a.js", "--json", "-"]).status.success());
     assert!(!run(&["a.js", "--json", "-", "--tsv", "-"]).status.success());
     assert!(!run(&["a.js", "b.js", "custom.map"]).status.success());
-    let default_path = fixture.write("bundle-trace.html", "IMPORTANT");
+    let default_path = fixture.write("coldpath.html", "IMPORTANT");
     let output = run(&["a.js"]);
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8_lossy(&output.stdout)
             .lines()
-            .filter(|line| *line == "Wrote bundle-trace.html")
+            .filter(|line| *line == "Wrote coldpath.html")
             .count(),
         1
     );
@@ -1360,20 +1353,20 @@ fn cli_selects_files_globs_and_explicit_maps_and_exports_stdout() {
             .contains("id=\"report-data\">")
     );
     for args in [
-        vec!["a.js", "--treemap", "bundle-trace.html"],
+        vec!["a.js", "--treemap", "coldpath.html"],
         vec!["a.js", "--json", "-"],
     ] {
         let output = run(&args);
         assert!(output.status.success());
-        assert!(!String::from_utf8_lossy(&output.stdout).contains("Wrote bundle-trace.html"));
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("Wrote bundle-trace.html"));
+        assert!(!String::from_utf8_lossy(&output.stdout).contains("Wrote coldpath.html"));
+        assert!(!String::from_utf8_lossy(&output.stderr).contains("Wrote coldpath.html"));
     }
     fs::remove_file(&default_path).unwrap();
     fs::create_dir(&default_path).unwrap();
     let output = run(&["a.js"]);
     assert!(!output.status.success());
-    assert!(!String::from_utf8_lossy(&output.stdout).contains("Wrote bundle-trace.html"));
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("Wrote bundle-trace.html"));
+    assert!(!String::from_utf8_lossy(&output.stdout).contains("Wrote coldpath.html"));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("Wrote coldpath.html"));
 }
 
 #[test]
@@ -1393,7 +1386,7 @@ fn cli_positional_coverage_uses_an_explicit_root_and_skips_unselected_siblings()
         .to_string(),
     );
     let run = |selection: &[&str], prefix: &str| {
-        let output = Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+        let output = Command::new(env!("CARGO_BIN_EXE_coldpath"))
             .current_dir(&fixture.0)
             .args(selection)
             .args([
@@ -1458,7 +1451,7 @@ fn cli_positional_filters_and_budgets_stay_relative_to_explicit_root() {
         r#"{"include":["assets/*.js"],"exclude":["assets/lazy.js"],"budgets":{"maxBytes":4}}"#,
     );
     let run = |selection: &[&str], budget: &str| {
-        Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+        Command::new(env!("CARGO_BIN_EXE_coldpath"))
             .current_dir(&fixture.0)
             .args(selection)
             .args([
@@ -1519,7 +1512,7 @@ fn selection_resolves_globs_deduplicates_files_and_binds_maps_under_the_root() {
     ];
     let dist = fs::canonicalize(fixture.0.join("dist")).unwrap();
     for explicit in [None, Some(dist.as_path())] {
-        let selection = bundle_trace::selection::resolve(&patterns, explicit).unwrap();
+        let selection = coldpath::selection::resolve(&patterns, explicit).unwrap();
         let prefix = if explicit.is_some() { "assets/" } else { "" };
         assert_eq!(
             selection.root,
@@ -1535,12 +1528,12 @@ fn selection_resolves_globs_deduplicates_files_and_binds_maps_under_the_root() {
             expected.iter().map(PathBuf::from).collect::<Vec<_>>()
         );
         assert_eq!(selection.maps.keys().cloned().collect::<Vec<_>>(), expected);
-        let options = bundle_trace::AnalyzeOptions {
+        let options = coldpath::AnalyzeOptions {
             files: Some(selection.files),
             maps: selection.maps,
             ..Default::default()
         };
-        let report = bundle_trace::analyze_with_options(&selection.root, &[], &options).unwrap();
+        let report = coldpath::analyze_with_options(&selection.root, &[], &options).unwrap();
         assert_eq!(report.totals.bytes, 9);
         assert_eq!(report.bundles[0].mapped_bytes, 4);
         assert_eq!(report.bundles[1].mapped_bytes, 5);
@@ -1561,7 +1554,7 @@ fn selection_allows_external_maps_but_rejects_scripts_outside_explicit_root() {
         script.to_string_lossy().into_owned(),
         map.to_string_lossy().into_owned(),
     ];
-    let selection = bundle_trace::selection::resolve(&patterns, Some(&root)).unwrap();
+    let selection = coldpath::selection::resolve(&patterns, Some(&root)).unwrap();
     assert_eq!(selection.files, vec![PathBuf::from("assets/app[entry].js")]);
     assert_eq!(
         selection.maps["assets/app[entry].js"],
@@ -1569,18 +1562,18 @@ fn selection_allows_external_maps_but_rejects_scripts_outside_explicit_root() {
     );
     let outside = fixture.write("outside.js", "outside");
     let error =
-        bundle_trace::selection::resolve(&[outside.to_string_lossy().into_owned()], Some(&root))
+        coldpath::selection::resolve(&[outside.to_string_lossy().into_owned()], Some(&root))
             .unwrap_err();
     assert!(error.to_string().contains("outside analysis root"));
-    let error = bundle_trace::selection::resolve(&patterns, Some(&script)).unwrap_err();
+    let error = coldpath::selection::resolve(&patterns, Some(&script)).unwrap_err();
     assert!(
         error
             .to_string()
             .contains("analysis root is not a directory")
     );
-    assert!(bundle_trace::selection::resolve(&[], Some(&root)).is_err());
+    assert!(coldpath::selection::resolve(&[], Some(&root)).is_err());
     assert!(
-        bundle_trace::selection::resolve(
+        coldpath::selection::resolve(
             &[fixture.0.join("missing*.js").to_string_lossy().into_owned()],
             Some(&root)
         )
@@ -1593,7 +1586,7 @@ fn selected_coverage_preserves_missing_file_and_verification_errors() {
     let fixture = Fixture::new();
     fixture.write("app.js", "abcd");
     fixture.write("lazy.js", "later");
-    let options = bundle_trace::AnalyzeOptions {
+    let options = coldpath::AnalyzeOptions {
         files: Some(vec![PathBuf::from("app.js")]),
         ..Default::default()
     };
@@ -1604,9 +1597,8 @@ fn selected_coverage_preserves_missing_file_and_verification_errors() {
         {"path":"lazy.js","sha256":"not-verified-when-unselected","sourceMapSha256":null,"functions":[]}
     ]});
     let coverage = fixture.write("coverage.json", &envelope.to_string());
-    let analyze_selected = || {
-        bundle_trace::analyze_with_options(&fixture.0, std::slice::from_ref(&coverage), &options)
-    };
+    let analyze_selected =
+        || coldpath::analyze_with_options(&fixture.0, std::slice::from_ref(&coverage), &options);
     let report = analyze_selected().unwrap();
     assert_eq!(report.totals.observed_bytes, 4);
     assert!(
@@ -1654,7 +1646,7 @@ fn positional_coverage_with_wrong_prefix_reports_the_analysis_root() {
         ])
         .to_string(),
     );
-    let output = Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+    let output = Command::new(env!("CARGO_BIN_EXE_coldpath"))
         .current_dir(&fixture.0)
         .args([
             "dist/assets/*.js",
@@ -1691,15 +1683,14 @@ fn explicit_selection_rejects_symlinks_outside_the_analysis_root() {
     let outside = fixture.write("outside.js", "outside");
     let link = root.join("linked.js");
     std::os::unix::fs::symlink(outside, &link).unwrap();
-    let error =
-        bundle_trace::selection::resolve(&[link.to_string_lossy().into_owned()], Some(&root))
-            .unwrap_err();
+    let error = coldpath::selection::resolve(&[link.to_string_lossy().into_owned()], Some(&root))
+        .unwrap_err();
     assert!(error.to_string().contains("outside analysis root"));
-    let options = bundle_trace::AnalyzeOptions {
+    let options = coldpath::AnalyzeOptions {
         files: Some(vec![PathBuf::from("linked.js")]),
         ..Default::default()
     };
-    let error = bundle_trace::analyze_with_options(&root, &[], &options).unwrap_err();
+    let error = coldpath::analyze_with_options(&root, &[], &options).unwrap_err();
     assert!(
         error
             .to_string()
@@ -1714,7 +1705,7 @@ fn compact_treemap_has_no_code_payload_and_escapes_source_paths() {
     let source = "</script><script>globalThis.injected=true</script>";
     fixture.write("app.js.map", &json!({"version":3,"sources":[source],"sourcesContent":["private original content"],"names":[],"mappings":"AAAA"}).to_string());
     let report = analyze(&fixture.0, &[]).unwrap();
-    let html = bundle_trace::report::treemap(&report).unwrap();
+    let html = coldpath::report::treemap(&report).unwrap();
     assert!(!html.contains(source));
     assert!(!html.contains("const secret = 42"));
     assert!(!html.contains("private original content"));

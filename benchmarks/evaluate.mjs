@@ -27,9 +27,9 @@ for (const name of datasets) {
   const manifest = await read(join(input, 'manifest.json'))
   const output = join(base, 'evaluation', name)
   await mkdir(output, {recursive: true})
-  const reportPath = join(output, 'bundle-trace.json')
+  const reportPath = join(output, 'coldpath.json')
   execFileSync(
-    'target/release/bundle-trace',
+    'target/release/coldpath',
     [
       '--dir',
       join(input, 'files'),

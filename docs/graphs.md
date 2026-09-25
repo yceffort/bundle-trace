@@ -3,7 +3,7 @@
 Graph export is optional and uses the `coldpath` package (`coldpath graph` and the bundler plugins). The Rust analyzer consumes the exported JSON offline. Source maps alone cannot recover dependency edges or import locations.
 
 ```sh
-bundle-trace --dir dist --graph artifacts/graph.json --graph-root . \
+coldpath --dir dist --graph artifacts/graph.json --graph-root . \
   --coverage initial.json --coverage interaction.json --initial-scenario initial \
   --source-compression --details --treemap artifacts/actions.html \
   --json artifacts/actions.json --markdown artifacts/actions.md
@@ -82,7 +82,7 @@ coldpath graph \
   --format turbopack --input .next/diagnostics/analyze \
   --root /path/to/turbopack-root --out artifacts/graph.json
 pnpm exec next build
-bundle-trace --dir .next/static --graph artifacts/graph.json \
+coldpath --dir .next/static --graph artifacts/graph.json \
   --graph-root /path/to/turbopack-root --treemap artifacts/next.html
 ```
 

@@ -21,7 +21,7 @@ coldpath collect \
   --scenario initial \
   --out artifacts/initial.coverage.json
 
-bundle-trace --dir dist/assets \
+coldpath --dir dist/assets \
   --coverage artifacts/initial.coverage.json \
   --html artifacts/report.html
 ```
@@ -48,7 +48,7 @@ coldpath collect \
   --scenario search --actions scenarios/search.mjs \
   --out artifacts/search.coverage.json
 
-bundle-trace --dir dist/assets \
+coldpath --dir dist/assets \
   --coverage artifacts/initial.coverage.json \
   --coverage artifacts/search.coverage.json \
   --html artifacts/combined.html

@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 const artifacts = join(root, 'artifacts', 'collector')
 const fixture = join(root, 'examples', 'recorded')
 await mkdir(artifacts, {recursive: true})
-const binary = join(root, 'target', 'debug', 'bundle-trace')
+const binary = join(root, 'target', 'debug', 'coldpath')
 execFileSync('cargo', ['build', '--locked'], {cwd: root, stdio: 'inherit'})
 const source = await readFile(join(fixture, 'entry.js'), 'utf8')
 let servedSource = source

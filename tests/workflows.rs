@@ -1,4 +1,4 @@
-use bundle_trace::{AnalyzeOptions, Status, analyze_with_options, ci, graph, sha256};
+use coldpath::{AnalyzeOptions, Status, analyze_with_options, ci, graph, sha256};
 use serde_json::{Value, json};
 use std::{
     fs,
@@ -11,7 +11,7 @@ struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
         let root = std::env::temp_dir().join(format!(
-            "bundle-trace-workflows-{}-{}",
+            "coldpath-workflows-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -130,7 +130,7 @@ fn ordered_observation_and_scenario_spans_preserve_unicode_and_overlap() {
     assert_eq!(implicit.scenarios, ["initial", "search", "open"]);
     assert_eq!(implicit.bundles[0].sources[0].first_observed.len(), 2);
     let comparison =
-        bundle_trace::baseline::compare(&implicit, &serde_json::to_vec(&report).unwrap()).unwrap();
+        coldpath::baseline::compare(&implicit, &serde_json::to_vec(&report).unwrap()).unwrap();
     assert!(
         !comparison
             .warnings
@@ -305,7 +305,7 @@ fn unobserved_budget_fails_without_selected_measurements_but_accepts_measured_ze
     );
     f.coverage("measured.json", "abcd", json!([]));
     let run = |coverage: Option<&str>, budget: &str| {
-        let mut cmd = Command::new(env!("CARGO_BIN_EXE_bundle-trace"));
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_coldpath"));
         cmd.current_dir(&f.0)
             .args(["app.js", "--max-unobserved-bytes", budget, "--json", "-"]);
         if let Some(path) = coverage {
@@ -344,7 +344,7 @@ fn graph_source_hashes_reject_stale_locations_and_keep_compact_exports_compact()
         {"from":"a","to":"b","kind":"static","location":{"line":1,"column":1},"locationEvidence":"plugin-input"}]});
     f.write("graph.json", &data.to_string());
     let run = || {
-        Command::new(env!("CARGO_BIN_EXE_bundle-trace"))
+        Command::new(env!("CARGO_BIN_EXE_coldpath"))
             .current_dir(&f.0)
             .args([
                 "--dir",
@@ -391,7 +391,7 @@ fn graph_source_hashes_reject_stale_locations_and_keep_compact_exports_compact()
     let output = run();
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("graph source snapshot differs"));
-    let mut report = bundle_trace::analyze(&f.0, &[]).unwrap();
+    let mut report = coldpath::analyze(&f.0, &[]).unwrap();
     let mut no_entry = data.clone();
     no_entry["modules"][0]["entry"] = json!(false);
     assert!(

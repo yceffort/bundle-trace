@@ -1,11 +1,11 @@
-# bundle-trace
+# coldpath
 
-[![CI](https://github.com/yceffort/bundle-trace/actions/workflows/ci.yml/badge.svg)](https://github.com/yceffort/bundle-trace/actions/workflows/ci.yml)
+[![CI](https://github.com/yceffort/coldpath/actions/workflows/ci.yml/badge.svg)](https://github.com/yceffort/coldpath/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 See which JavaScript runs initially, which runs only during interactions, and what changed in a pull request—backed by source maps and V8 coverage.
 
-`bundle-trace` is a Rust CLI. Analysis, compression, and report generation run offline, without Node.js or a browser. Bring an existing Chrome, Playwright, Puppeteer, or Node coverage recording, or use the optional Chromium collector.
+`coldpath` is a Rust CLI. Analysis, compression, and report generation run offline, without Node.js or a browser. Bring an existing Chrome, Playwright, Puppeteer, or Node coverage recording, or use the optional Chromium collector.
 
 - Attribute generated JavaScript to original sources using source maps.
 - Keep **observed**, **unobserved**, and **unmeasured** bytes separate.
@@ -24,16 +24,16 @@ Early-stage software: the CLI and JSON schema may change. Unobserved bytes are c
 Requires Rust 1.88 or newer. Install from GitHub:
 
 ```sh
-cargo install --git https://github.com/yceffort/bundle-trace --locked
+cargo install --git https://github.com/yceffort/coldpath --locked
 ```
 
 Or build locally:
 
 ```sh
-git clone https://github.com/yceffort/bundle-trace.git
-cd bundle-trace
+git clone https://github.com/yceffort/coldpath.git
+cd coldpath
 cargo build --locked --release
-./target/release/bundle-trace --help
+./target/release/coldpath --help
 ```
 
 The project is not published to crates.io or npm yet. Node.js is only needed for optional collection, graph export, and integration tests.
@@ -47,7 +47,7 @@ coldpath collect --scenarios coldpath.scenarios.json
 coldpath analyze --scenarios coldpath.scenarios.json --graph dist/assets/coldpath.graph.json --treemap artifacts/actions.html
 ```
 
-`coldpath analyze` (or `coldpath` with analyzer options) runs the Rust analyzer from `COLDPATH_ANALYZER`, the `coldpath-<platform>-<arch>` package that `scripts/pack-native.mjs` builds, or `bundle-trace` on `PATH`, in that order. See [collecting coverage](docs/collecting.md#scenario-files) for the scenario file.
+`coldpath analyze` (or `coldpath` with analyzer options) runs the Rust analyzer from `COLDPATH_ANALYZER`, the `coldpath-<platform>-<arch>` package that `scripts/pack-native.mjs` builds, or the native `coldpath` binary on `PATH` (the npm wrapper skips itself), in that order. See [collecting coverage](docs/collecting.md#scenario-files) for the scenario file.
 
 ## Try the recorded example
 
@@ -171,7 +171,7 @@ pnpm exec vite build examples/demo
 pnpm exec vite preview examples/demo --port 4173 --host 127.0.0.1   # in another terminal
 cd examples/demo
 node ../../bin/coldpath.mjs collect --scenarios coldpath.scenarios.json
-COLDPATH_ANALYZER=../../target/release/bundle-trace node ../../bin/coldpath.mjs analyze \
+COLDPATH_ANALYZER=../../target/release/coldpath node ../../bin/coldpath.mjs analyze \
   --scenarios coldpath.scenarios.json --graph dist/coldpath.graph.json \
   --source-compression --details --treemap artifacts/report.html
 ```
@@ -181,17 +181,17 @@ COLDPATH_ANALYZER=../../target/release/bundle-trace node ../../bin/coldpath.mjs 
 For a compact size explorer, pass files or a quoted glob:
 
 ```sh
-bundle-trace 'dist/**/*.js' --treemap artifacts/size.html
-bundle-trace dist/app.js dist/app.js.map --json artifacts/size.json
-bundle-trace 'dist/**/*.js' --tsv -
+coldpath 'dist/**/*.js' --treemap artifacts/size.html
+coldpath dist/app.js dist/app.js.map --json artifacts/size.json
+coldpath 'dist/**/*.js' --tsv -
 ```
 
-Open the HTML directly in your browser. Click bundles and folders to zoom, navigate back with breadcrumbs, search sources, or group by package. Tile area represents bytes; coverage colors distinguish observed, unobserved, and unmeasured code. Every file is available in the table, including small tiles. With file/glob inputs and no output option, the CLI writes `bundle-trace.html` in the current directory, replacing any existing file, and prints `Wrote bundle-trace.html` after saving it.
+Open the HTML directly in your browser. Click bundles and folders to zoom, navigate back with breadcrumbs, search sources, or group by package. Tile area represents bytes; coverage colors distinguish observed, unobserved, and unmeasured code. Every file is available in the table, including small tiles. With file/glob inputs and no output option, the CLI writes `coldpath.html` in the current directory, replacing any existing file, and prints `Wrote coldpath.html` after saving it.
 
 Build your application with source maps and point the CLI at its JavaScript output:
 
 ```sh
-bundle-trace --dir dist --compression --html artifacts/bundle.html
+coldpath --dir dist --compression --html artifacts/bundle.html
 ```
 
 Without a recording, all bytes are unmeasured. Missing source maps are allowed and remain `[unmapped]`; explicitly referenced missing or invalid maps cause an error.
@@ -199,7 +199,7 @@ Without a recording, all bytes are unmeasured. Missing source maps are allowed a
 To add a Chrome Coverage export:
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --coverage chrome-coverage.json \
   --url-prefix https://example.com/assets/ \
   --json artifacts/coverage.json \
@@ -226,7 +226,7 @@ Source-map attribution is an estimate: a mapping owns bytes up to the next mappi
 ## Find loading boundaries
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --coverage initial.json --coverage open-report.json --coverage search.json \
   --initial-scenario initial --scenario-order initial,open-report,search \
   --graph artifacts/graph.json --graph-root . --source-compression \
@@ -258,7 +258,7 @@ For Next.js, use the build's static output directory with `--prefix /_next/stati
 ## Use in CI
 
 ```sh
-bundle-trace --dir dist \
+coldpath --dir dist \
   --exclude 'vendor/**' \
   --compression --max-bytes 1000000 \
   --json artifacts/report.json \
@@ -270,7 +270,7 @@ Exit codes: `0` success, `1` input/analysis error, `2` budget exceeded. Argument
 Compare a PR build against a saved report from main:
 
 ```sh
-bundle-trace --dir dist --baseline artifacts/main.json \
+coldpath --dir dist --baseline artifacts/main.json \
   --max-added-bytes 10000 --treemap artifacts/pr.html \
   --json artifacts/pr.json --markdown artifacts/pr.md
 ```

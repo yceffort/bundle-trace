@@ -28,10 +28,10 @@ await mkdir(join(project, 'src'), {recursive: true})
 for (const file of ['entry.js', 'startup.js', 'chart.js', 'search.js', 'page.jsx']) {
   await copyFile(join(root, 'fixtures/corpus', file), join(project, 'src', file))
 }
-await writeFile(join(project, 'package.json'), JSON.stringify({name: 'bundle-trace-accuracy-corpus', private: true, type: 'module'}))
+await writeFile(join(project, 'package.json'), JSON.stringify({name: 'coldpath-accuracy-corpus', private: true, type: 'module'}))
 await writeFile(join(project, 'index.html'), '<!doctype html><meta charset="utf-8"><script type="module" src="/src/entry.js"></script>')
 execFileSync('cargo', ['build', '--locked'], {cwd: root, stdio: 'inherit'})
-const binary = join(root, 'target/debug/bundle-trace')
+const binary = join(root, 'target/debug/coldpath')
 const artifacts = []
 const expectations = JSON.parse(await readFile(join(root, 'fixtures/corpus/expectations.json'), 'utf8'))
 const save = async (filename, value) => { await mkdir(dirname(filename), {recursive: true}); await writeFile(filename, JSON.stringify(value) + '\n') }
@@ -72,7 +72,7 @@ await finish('webpack', webpackDir, 'entry/main.js')
 const nextProject = join(project, 'next')
 await mkdir(join(nextProject, 'pages'), {recursive: true})
 await writeFile(join(nextProject, 'pages/index.jsx'), "export {default} from '../../src/page.jsx';\n")
-await save(join(nextProject, 'package.json'), {name: 'bundle-trace-corpus-next', private: true,
+await save(join(nextProject, 'package.json'), {name: 'coldpath-corpus-next', private: true,
   dependencies: {next: require('next/package.json').version, react: require('react/package.json').version, 'react-dom': require('react-dom/package.json').version}})
 await writeFile(join(nextProject, 'next.config.mjs'), 'export default ' + JSON.stringify({productionBrowserSourceMaps: true,
   turbopack: {root}, experimental: {cpus: 2}}) + ';\n')

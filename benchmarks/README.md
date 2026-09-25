@@ -1,6 +1,6 @@
 # Reproduce the comparison
 
-The [measured results](RESULTS.md) compare bundle-trace 0.1.0, source-map-explorer 2.5.3, and monocart-coverage-reports 2.13.0. These scripts are independent of the analyzer's dependencies. Raw generated reports live in the ignored `artifacts/comparison/` directory; compact evidence is in `results/`.
+The [measured results](RESULTS.md) compare coldpath 0.1.0, source-map-explorer 2.5.3, and monocart-coverage-reports 2.13.0. These scripts are independent of the analyzer's dependencies. Raw generated reports live in the ignored `artifacts/comparison/` directory; compact evidence is in `results/`.
 
 Use Node.js 24 and Python 3 on macOS or Linux. Install the main project's dev dependencies for the real Chromium reproductions, and the separate benchmark dependencies:
 
@@ -48,7 +48,7 @@ python3 benchmarks/measure.py --node node --rounds 9
 
 `blog-measured` contains scripts with observations; `blog-all` contains every generated script; `blog-mapped` selects mapped scripts for the common static-analysis workload. The last comparison deliberately excludes mapless files because source-map-explorer cannot include those in a successful complete report. The full-directory compatibility outcome is recorded separately.
 
-Preparation checks captured JavaScript and map hashes before copying inputs. It preserves generated text and maps, creates Playwright-shaped inputs for bundle-trace/Monocart, and normalizes the same ranges to Chrome export format for source-map-explorer. The latter normalization is checked independently and is outside timed measurements. The preparation helper currently expects adjacent or final-line relative external maps, matching these preserved inputs.
+Preparation checks captured JavaScript and map hashes before copying inputs. It preserves generated text and maps, creates Playwright-shaped inputs for coldpath/Monocart, and normalizes the same ranges to Chrome export format for source-map-explorer. The latter normalization is checked independently and is outside timed measurements. The preparation helper currently expects adjacent or final-line relative external maps, matching these preserved inputs.
 
 Timing uses fresh child processes in randomized serial order: one warmup and nine measured repetitions per task, with a fixed seed. It includes process startup, parsing, analysis, and report writes. It excludes installation, compilation, input conversion, and browser capture. Filesystem caches are warm. `wait4` records each child's maximum resident set size, not a sampled heap estimate. No analyzer runs concurrently with another in this harness. JSON schemas and HTML functionality differ, so timings represent complete configured workflows, not equal algorithms.
 

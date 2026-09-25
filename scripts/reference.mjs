@@ -12,10 +12,10 @@ export async function measuredDetails(
   root,
   artifacts,
   binary = fileURLToPath(
-    new URL('../target/release/bundle-trace', import.meta.url),
+    new URL('../target/release/coldpath', import.meta.url),
   ),
 ) {
-  const directory = await mkdtemp(resolve(tmpdir(), 'bundle-trace-intervals-'))
+  const directory = await mkdtemp(resolve(tmpdir(), 'coldpath-intervals-'))
   try {
     const paths = [
       ...new Set(

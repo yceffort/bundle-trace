@@ -45,8 +45,8 @@ after = '''            if let Some(counts) = source_counts.get_mut(&segment.sour
 assert code.count(before) == 1
 lib.write_text(code.replace(before, after))
 subprocess.run(['cargo', 'build', '--release', '--locked', '--manifest-path', str(COPY / 'Cargo.toml'), '--target-dir', str(BASE / 'target')], cwd=ROOT, check=True)
-experiment = BASE / 'lookup-bundle-trace'
-shutil.copyfile(BASE / 'target/release/bundle-trace', experiment)
+experiment = BASE / 'lookup-coldpath'
+shutil.copyfile(BASE / 'target/release/coldpath', experiment)
 experiment.chmod(0o755)
 samples = []
 rng = random.Random(20260923)

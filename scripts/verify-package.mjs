@@ -16,7 +16,7 @@ await mkdir(join(project, 'src'), {recursive: true})
 const exec = (command, args, cwd = project) => execFileSync(command, args, {cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit']})
 
 execFileSync('cargo', ['build', '--locked'], {cwd: root, stdio: 'inherit'})
-const native = exec(process.execPath, [join(root, 'scripts/pack-native.mjs'), '--binary', join(root, 'target/debug/bundle-trace'), '--out', work], root).trim()
+const native = exec(process.execPath, [join(root, 'scripts/pack-native.mjs'), '--binary', join(root, 'target/debug/coldpath'), '--out', work], root).trim()
 const main = join(work, exec('npm', ['pack', '--silent', '--pack-destination', work], root).trim().split('\n').at(-1))
 const devDependencies = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).devDependencies
 

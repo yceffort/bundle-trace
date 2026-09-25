@@ -5,12 +5,12 @@ import {join, resolve} from 'node:path'
 import {parseArgs} from 'node:util'
 
 const {values} = parseArgs({options: {binary: {type: 'string'}, out: {type: 'string'}}})
-if (!values.binary || !values.out) throw new Error('Usage: node scripts/pack-native.mjs --binary target/release/bundle-trace --out DIRECTORY')
+if (!values.binary || !values.out) throw new Error('Usage: node scripts/pack-native.mjs --binary target/release/coldpath --out DIRECTORY')
 const {version, license, repository} = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 const name = `coldpath-${process.platform}-${process.arch}`
 const out = resolve(values.out)
 const dir = join(out, name)
-const executable = process.platform === 'win32' ? 'bundle-trace.exe' : 'bundle-trace'
+const executable = process.platform === 'win32' ? 'coldpath.exe' : 'coldpath'
 await rm(dir, {recursive: true, force: true})
 await mkdir(join(dir, 'bin'), {recursive: true})
 await copyFile(values.binary, join(dir, 'bin', executable))
