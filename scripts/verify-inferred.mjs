@@ -28,10 +28,16 @@ const chunk = `(self.webpackChunk_test=self.webpackChunk_test||[]).push([[1],{${
 (function(){var m=self.webpackChunk_test[0][1],x={};m[10](x);var s=document.createElement("script");s.src="/a/"+"dy"+"n.js";document.head.append(s)})()
 //# sourceMappingURL=chunk.js.map`
 const turbo = '(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,20,e=>{e.x="turbo-sentinel"},"21",function(e){\n  e.y=1\n}]);'
+// Scope-hoisted like Rollup/Vite output: no module registrations, so only a whole-chunk source is possible.
+const vite = 'function a(){return "vite-sentinel-a"}\nfunction b(){return "vite-other-b"}\nwindow.v=a()'
+const mapped = 'window.mapped=1\n//# sourceMappingURL=mapped.js.map'
 const pages = {
-  '/': ['text/html', '<!doctype html><meta charset="utf-8"><script src="/a/chunk.js"></script><script src="/a/turbo.js"></script><script>var s=document.createElement("script");s.src="/a/late.js";document.head.append(s)</script>'],
+  '/': ['text/html', '<!doctype html><meta charset="utf-8"><script src="/a/chunk.js"></script><script src="/a/turbo.js"></script><script src="/a/vite.js"></script><script src="/a/mapped.js"></script><script>var s=document.createElement("script");s.src="/a/late.js";document.head.append(s)</script>'],
   '/a/chunk.js': ['text/javascript', chunk],
   '/a/turbo.js': ['text/javascript', turbo],
+  '/a/vite.js': ['text/javascript', vite],
+  '/a/mapped.js': ['text/javascript', mapped],
+  '/a/mapped.js.map': ['application/json', JSON.stringify({version: 3, sources: ['src/mapped.ts'], sourcesContent: ['window.mapped = 1'], names: [], mappings: 'AAAA'})],
   '/a/dyn.js': ['text/javascript', 'window.dyn=1'],
   '/a/late.js': ['text/javascript', 'window.late=1'],
 }
@@ -44,6 +50,11 @@ const site = createServer((request, response) => {
 // Answers from source text: module 10 gets real evidence, 11 only a common string, the rest an absent one.
 const answer = (text) => {
   const source = JSON.parse(text).source
+  if (source.includes('/chunk/')) {
+    return {summary: 'chunk summary', shortName: 'guess-chunk', reasoning: 'because', contents: source.endsWith('/vite.js')
+      ? [{name: 'lib-a', kind: 'package', evidence: ['vite-sentinel-a']}, {name: 'lib-b', kind: 'package', evidence: ['absent from the chunk']}]
+      : [{name: 'lib-x', kind: 'package', evidence: ['absent from the chunk']}]}
+  }
   const evidence = source.endsWith('/10.js') ? ['coldpath-sentinel', 'absent from the module'] :
     source.endsWith('/11.js') ? ['shared-common-text'] : ['absent from the module']
   return {summary: 'summary of ' + source, name: 'guess-' + source.split('/').pop(), shortName: 'guess', kind: 'app', reasoning: 'because', evidence}
@@ -79,10 +90,14 @@ try {
   assert.equal(loading[`${host}/a/dyn.js`].load, 'dynamic')
   assert.equal(loading[`${host}/a/chunk.js`].initiator, 'parser')
   // The declared map is a 404: snapshot binds an empty map so analysis does not fail.
-  assert.deepEqual(JSON.parse(await readFile(join(out, 'maps.json'), 'utf8')), {[`${host}/a/chunk.js`]: `maps/${host}/a/chunk.js.map`})
+  assert.deepEqual(JSON.parse(await readFile(join(out, 'maps.json'), 'utf8')),
+    {[`${host}/a/chunk.js`]: `maps/${host}/a/chunk.js.map`, [`${host}/a/mapped.js`]: `files/${host}/a/mapped.js.map`})
   assert.equal(await readFile(join(out, 'files', host, 'a', 'chunk.js'), 'utf8'), chunk)
 
-  await cli('modules', '--dir', join(out, 'files'), '--out', join(out, 'modules'))
+  await cli('modules', '--dir', join(out, 'files'), '--out', join(out, 'modules'), '--maps-json', join(out, 'maps.json'), '--chunks')
+  const recovered = JSON.parse(await readFile(join(out, 'modules', 'maps.json'), 'utf8'))
+  assert(!recovered[`${host}/a/mapped.js`], 'a script with a real map is left alone')
+  assert(recovered[`${host}/a/vite.js`] && recovered[`${host}/a/chunk.js`])
   const analyze = (...extra) => cli('analyze', '--dir', join(out, 'files'), '--coverage', join(out, 'coverage.json'), '--url-prefix', 'http://',
     '--maps-json', join(out, 'maps.json'), '--maps-json', join(out, 'modules', 'maps.json'), '--loading', join(out, 'loading.json'), '--details', ...extra)
   await analyze('--json', join(out, 'report.json'))
@@ -106,6 +121,13 @@ try {
     assert.equal(row.bytes, Buffer.byteLength(text.replaceAll('\n', '')), `Turbopack module ${id} bytes`)
   }
 
+  // Line terminators stay [unmapped]; everything else belongs to the one whole-chunk source.
+  const whole = report.bundles.find((row) => row.path === `${host}/a/vite.js`).sources.filter((row) => row.source !== '[unmapped]')
+  assert.deepEqual(whole.map((row) => row.source), [`webpack://inferred/chunk/${host}/a/vite.js`])
+  assert.equal(whole[0].bytes, Buffer.byteLength(vite.replaceAll('\n', '')))
+  assert.deepEqual(report.bundles.find((row) => row.path === `${host}/a/mapped.js`).sources.map((row) => row.source).filter((s) => s !== '[unmapped]'),
+    [`${host}/a/src/mapped.ts`])
+
   await run(process.execPath, [join(root, 'bin', 'coldpath.mjs'), 'label', '--report', join(out, 'report.json'), '--out', join(out, 'labels.json'),
     '--provider', 'openai', '--model', 'test-model', '--base-url', modelUrl + '/v1'], {env})
   const labels = JSON.parse(await readFile(join(out, 'labels.json'), 'utf8'))
@@ -115,13 +137,18 @@ try {
   assert.deepEqual(label(11), {summary: 'summary of webpack://inferred/webpackChunk_test/11.js'}, 'common evidence rejects the guess')
   assert.deepEqual(Object.keys(label(12)), ['summary'], 'absent-only evidence rejects the guess')
   assert(!Object.keys(labels.sources).some((source) => !source.startsWith('webpack://inferred/')), 'identify mode only guesses recovered modules')
+  assert.deepEqual(labels.sources[`webpack://inferred/chunk/${host}/a/vite.js`], {shortName: 'guess-chunk', summary: 'chunk summary', reasoning: 'because',
+    contents: [{name: 'lib-a', kind: 'package', evidence: ['vite-sentinel-a']}]}, 'chunk parts keep only evidenced entries')
+  assert.deepEqual(labels.sources[`webpack://inferred/chunk/${host}/a/dyn.js`], {summary: 'chunk summary'}, 'a chunk with no evidenced part keeps its summary')
 
   await run(process.execPath, [join(root, 'bin', 'coldpath.mjs'), 'label', '--report', join(out, 'report.json'), '--out', join(out, 'described.json'),
     '--mode', 'describe'], {env: {...env, ANTHROPIC_API_KEY: 'test', ANTHROPIC_BASE_URL: modelUrl}})
   const described = JSON.parse(await readFile(join(out, 'described.json'), 'utf8'))
   assert.equal(described.generator.provider, 'anthropic')
   // Describe covers every source with content; here only recovered modules have content.
-  assert.equal(Object.keys(described.sources).length, Object.keys(modules).length + 2)
+  const withContent = new Set(report.bundles.flatMap((row) => row.sources).filter((row) => row.content).map((row) => row.source))
+  assert.equal(Object.keys(described.sources).length, withContent.size)
+  assert(described.sources[`${host}/a/src/mapped.ts`], 'describe covers real source-mapped sources')
   assert(Object.values(described.sources).every((row) => Object.keys(row).join() === 'summary'))
   assert(requests.some((row) => row.url === '/v1/messages'))
 
@@ -143,6 +170,11 @@ try {
     assert.match(await page.locator('#scope').textContent(), /^≈ guess \(10\.js\)$/)
     assert.match(await page.locator('#file').textContent(), /Inferred identity: guess-10\.js \(app\).*coldpath-sentinel.*not source-map evidence/s)
     assert.match(await page.locator('#file').textContent(), /Bundle loaded.*Initial HTML tags \(initiator: parser\)/s)
+    await page.goto('file://' + join(out, 'labeled.html'))
+    await page.fill('#search', 'lib-a')
+    for (let i = 0; i < 6 && await page.locator('#file').isHidden(); i++) await page.locator('#rows button').first().click()
+    assert.match(await page.locator('#file').textContent(), /Inferred contents of this chunk.*lib-a \(package\): vite-sentinel-a/s)
+    assert.doesNotMatch(await page.locator('#file').textContent(), /lib-b/)
     assert.deepEqual(errors, [])
   } finally {
     await browser.close()

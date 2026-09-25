@@ -909,7 +909,8 @@
                 ' ' +
                 bundle.path +
                 ' ' +
-                [original.label?.name, original.label?.shortName, original.label?.summary].filter(Boolean).join(' ')
+                [original.label?.name, original.label?.shortName, original.label?.summary,
+                  ...(original.label?.contents || []).map((part) => part.name)].filter(Boolean).join(' ')
               ).toLowerCase()
               add(parent, source)
             }
@@ -983,6 +984,7 @@
             (row.source || row.name) +
             '\n' +
             (row.label?.name ? 'Inferred (AI guess): ' + row.label.name + '\n' : '') +
+            (row.label?.contents?.length ? 'Inferred contents (AI guess): ' + row.label.contents.map((part) => part.name).join(', ') + '\n' : '') +
             (row.loading ? 'Loaded: ' + loadText(row.loading) + '\n' : '') +
             keys
               .map(
@@ -1182,6 +1184,20 @@
                   label.evidence.forEach((text, i) => list.append(...(i ? [' '] : []), element('code', text)))
                   callout.append(list)
                 }
+                $('file').append(callout)
+              }
+              if (label.contents?.length) {
+                const callout = element('div'), list = element('ul')
+                callout.className = 'callout inferred'
+                callout.append(element('strong', 'Inferred contents of this chunk'))
+                if (label.reasoning) callout.append(element('p', label.reasoning))
+                for (const part of label.contents) {
+                  const item = element('li')
+                  item.append(element('strong', part.name + (part.kind ? ' (' + part.kind + ')' : '')), ': ')
+                  part.evidence.forEach((text, i) => item.append(...(i ? [' '] : []), element('code', text)))
+                  list.append(item)
+                }
+                callout.append(list)
                 $('file').append(callout)
               }
               note('Generated' + by + '. A language model guessed this from the code; it is not source-map evidence and can be wrong.')

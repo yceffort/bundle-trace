@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::Report;
 
 /// A description of one report source, usually produced by `coldpath label`.
-/// `name`, `kind`, `reasoning` and `evidence` are guesses about identity; `summary` describes the code.
+/// `name`, `kind`, `reasoning`, `evidence` and `contents` are guesses about identity; `summary` describes the code.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SourceLabel {
@@ -23,6 +23,19 @@ pub struct SourceLabel {
     pub summary: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reasoning: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<String>,
+    /// For a source that is a whole chunk: what it appears to contain, each with its own evidence.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contents: Vec<LabelPart>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LabelPart {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence: Vec<String>,
 }
@@ -93,9 +106,25 @@ pub fn attach_labels(report: &mut Report, data: &[u8]) -> Result<()> {
                 continue;
             };
             if let Some(content) = &source.content {
-                let before = label.evidence.len();
-                label.evidence.retain(|e| content.contains(e.as_str()));
-                *dropped.entry(source.source.clone()).or_default() += before - label.evidence.len();
+                let found = |e: &String| content.contains(e.as_str());
+                let before = label.evidence.len()
+                    + label
+                        .contents
+                        .iter()
+                        .map(|p| p.evidence.len())
+                        .sum::<usize>();
+                label.evidence.retain(found);
+                for part in &mut label.contents {
+                    part.evidence.retain(found);
+                }
+                label.contents.retain(|part| !part.evidence.is_empty());
+                let after = label.evidence.len()
+                    + label
+                        .contents
+                        .iter()
+                        .map(|p| p.evidence.len())
+                        .sum::<usize>();
+                *dropped.entry(source.source.clone()).or_default() += before - after;
             }
             source.label = Some(label.clone());
         }

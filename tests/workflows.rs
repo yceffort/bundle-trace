@@ -441,7 +441,7 @@ fn labels_and_loading_attach_without_changing_counts_and_drop_absent_evidence() 
     let before = serde_json::to_value(&report.totals).unwrap();
     let labels = json!({"schemaVersion":1,"generator":{"provider":"test","model":"m","mode":"identify"},"sources":{
         "m/1.js":{"name":"first","shortName":"first","kind":"app","summary":"s","reasoning":"r","evidence":["var a=1","not in source"]},
-        "m/2.js":{"summary":"only a summary"},
+        "m/2.js":{"summary":"only a summary","contents":[{"name":"p","kind":"package","evidence":["var b=2"]},{"name":"q","evidence":["missing"]}]},
         "m/missing.js":{"summary":"x"}}});
     coldpath::annotations::attach_labels(&mut report, labels.to_string().as_bytes()).unwrap();
     let loading = json!({"schemaVersion":1,"bundles":{"app.js":{"load":"html","initiator":"parser","startMs":5},"gone.js":{"load":"dynamic"}}});
@@ -458,7 +458,7 @@ fn labels_and_loading_attach_without_changing_counts_and_drop_absent_evidence() 
     assert_eq!(value["bundles"][0]["sources"][0]["label"]["name"], "first");
     assert_eq!(
         value["bundles"][0]["sources"][1]["label"],
-        json!({"summary":"only a summary"})
+        json!({"summary":"only a summary","contents":[{"name":"p","kind":"package","evidence":["var b=2"]}]})
     );
     assert_eq!(
         value["bundles"][0]["loading"],
@@ -467,6 +467,7 @@ fn labels_and_loading_attach_without_changing_counts_and_drop_absent_evidence() 
     assert_eq!(value["labelGenerator"]["model"], "m");
     let warnings = value["warnings"].to_string();
     assert!(warnings.contains("m/1.js: dropped 1 label evidence"));
+    assert!(warnings.contains("m/2.js: dropped 1 label evidence"));
     assert!(warnings.contains("1 --labels entries match no report source"));
     assert!(warnings.contains("1 --loading entries match no analyzed bundle"));
     let bad = json!({"schemaVersion":1,"bundles":{"app.js":{"load":"prefetch"}}});
