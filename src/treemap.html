@@ -673,6 +673,11 @@
           <p>Candidates for loading later. Select one to find it in the explorer.</p>
           <ol id="later-list" class="rows"></ol>
         </section>
+        <section id="duplicate-finding" class="card" hidden>
+          <h2>Shipped in more than one file</h2>
+          <p>Extra copies of the same source, whether or not they ran. Select one to find it in the explorer.</p>
+          <ol id="duplicate-list" class="rows"></ol>
+        </section>
       </div>
       <details id="actions" class="panel" open hidden>
         <summary><h2>Review actions</h2></summary>
@@ -1281,6 +1286,18 @@
           const total = report.totals
           const loadedBytes = loaded(total)
           const unloaded = report.bundles.filter((bundle) => !(bundle.bytes - bundle.unmeasuredBytes))
+          // Duplication does not depend on recordings.
+          const duplicates = [...(report.duplicateSources || [])]
+            .sort((a, b) => b.duplicates.extraBytes - a.duplicates.extraBytes)
+            .slice(0, 6)
+          for (const row of duplicates) {
+            const path = shortPath(row.source)
+            finding('duplicate-list', row.label?.shortName ? '≈ ' + row.label.shortName + ' (' + path.split('/').pop() + ')' : path.split('/').pop(),
+              size(row.duplicates.extraBytes) + ' extra',
+              row.duplicates.bundles + ' copies, ' + size(row.bytes) + ' in total: ' + path, undefined, path)
+          }
+          $('duplicate-finding').hidden = !duplicates.length
+          $('findings').hidden = !duplicates.length
           if (!report.scenarios.length || !loadedBytes) {
             $('headline').textContent = size(total.bytes) + ' of JavaScript, with no execution recordings'
             $('subline').textContent = 'Add coverage recordings to see which code runs.'
@@ -1347,7 +1364,7 @@
               'Runs only in "' + row.scenario + '": ' + path, undefined, path.split('/').pop())
           }
           $('later-finding').hidden = !rows.length
-          $('findings').hidden = !idle.length && !rows.length
+          $('findings').hidden = !idle.length && !rows.length && !duplicates.length
         }
         function renderStats(totals) {
           $('stats').replaceChildren()

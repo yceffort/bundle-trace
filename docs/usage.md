@@ -138,6 +138,8 @@ Inspector HTML stores details by chunk and decodes them on demand. Blocks larger
 
 ### Labels and load causes
 
+A source mapped into more than one bundle has `sources[].duplicates`: `bundles` (how many bundles contain it) and `extraBytes` (the bytes of every copy except the largest). Copies can be minified differently, so their sizes may differ. Duplication is reported separately from coverage, since a copy can be both needed and executed, and it never changes totals or budgets. The treemap lists the largest duplicates under "Shipped in more than one file". `[unmapped]` is never a duplicate.
+
 `--labels labels.json` attaches descriptions produced by `coldpath label` to `sources[].label` and `bundles[].sources[].label`, and records `labelGenerator`. `--loading loading.json` attaches `bundles[].loading` from `coldpath snapshot`. Labels are a language model's summaries and guesses, never attribution evidence; neither option changes counts or budgets. See [analyzing a site you do not build](third-party.md) for both file formats.
 
 ### Scenarios and execution phases

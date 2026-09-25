@@ -133,6 +133,25 @@ try {
   await page.emulateMedia({colorScheme: 'dark'})
   await page.screenshot({path: join(output, 'dark.png'), fullPage: true})
 
+  // One source shipped in two bundles: JSON counts the copies, and the treemap lists the extra bytes.
+  const shared = join(output, 'shared')
+  await mkdir(shared, {recursive: true})
+  for (const [name, length] of [['a.js', 30], ['b.js', 20]]) {
+    await writeFile(join(shared, name), ';'.repeat(length))
+    await writeFile(join(shared, name + '.map'), JSON.stringify({version: 3, sources: ['src/shared.ts'], names: [], mappings: 'AAAA'}))
+  }
+  const sharedJson = join(output, 'shared.json'), sharedHtml = join(output, 'shared.html')
+  execFileSync(binary, ['--dir', shared, '--json', sharedJson, '--treemap', sharedHtml], {stdio: 'pipe'})
+  const sharedReport = JSON.parse(await readFile(sharedJson, 'utf8'))
+  assert.deepEqual(sharedReport.sources.find((row) => row.source.endsWith('src/shared.ts')).duplicates, {bundles: 2, extraBytes: 20})
+  assert.equal(sharedReport.totals.bytes, 50, 'duplicates do not change totals')
+  await page.setViewportSize({width: 1440, height: 1000})
+  await page.goto(pathToFileURL(sharedHtml).href)
+  assert(await page.locator('#duplicate-finding').isVisible())
+  assert.match(await page.locator('#duplicate-list').textContent(), /shared\.ts.*20 B extra.*2 copies, 50 B in total/)
+  await page.goto(pathToFileURL(html).href)
+  assert(await page.locator('#duplicate-finding').isHidden(), 'no finding without duplicates')
+
   // Source-map names are data even when they contain a script closing tag.
   const hostile = '</script><script>globalThis.injected=true</script>'
   await writeFile(

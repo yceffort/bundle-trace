@@ -53,8 +53,19 @@ pub struct SourceRow {
     pub estimated_compression: Option<ci::CompressedSizes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<annotations::SourceLabel>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duplicates: Option<Duplicates>,
     #[serde(flatten)]
     pub counts: Counts,
+}
+
+/// A source shipped in more than one bundle. Independent of coverage: a copy can be needed and executed.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Duplicates {
+    pub bundles: usize,
+    /// Bytes of every copy except the largest one.
+    pub extra_bytes: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -643,6 +654,27 @@ pub fn analyze_with_options(
         coverage.keys().collect::<Vec<_>>()
     );
     (report.sources, report.packages) = aggregate_sources(source_counts);
+    let mut copies: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
+    for source in report.bundles.iter().flat_map(|bundle| &bundle.sources) {
+        if source.source != UNMAPPED {
+            let entry = copies.entry(&source.source).or_default();
+            entry.0 += 1;
+            entry.1 = entry.1.max(source.counts.bytes);
+        }
+    }
+    let copies = copies
+        .into_iter()
+        .filter(|(_, (bundles, _))| *bundles > 1)
+        .map(|(source, copies)| (source.to_owned(), copies))
+        .collect::<BTreeMap<_, _>>();
+    for source in &mut report.sources {
+        if let Some(&(bundles, largest)) = copies.get(&source.source) {
+            source.duplicates = Some(Duplicates {
+                bundles,
+                extra_bytes: source.counts.bytes - largest,
+            });
+        }
+    }
     if options.source_compression {
         let mut estimates: BTreeMap<String, ci::CompressedSizes> = BTreeMap::new();
         let mut packages: BTreeMap<String, ci::CompressedSizes> = BTreeMap::new();
@@ -686,6 +718,7 @@ fn aggregate_sources(source_counts: BTreeMap<String, Counts>) -> (Vec<SourceRow>
             package,
             estimated_compression: None,
             label: None,
+            duplicates: None,
             counts,
         });
     }

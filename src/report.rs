@@ -22,6 +22,7 @@ struct HtmlReport<'a> {
     compression: &'a Option<crate::ci::CompressedSizes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     label_generator: &'a Option<crate::annotations::LabelGenerator>,
+    duplicate_sources: Vec<&'a crate::SourceRow>,
     bundles: Vec<HtmlBundle<'a>>,
 }
 
@@ -106,6 +107,11 @@ pub fn html(report: &Report) -> Result<String> {
         budget_failures: &report.budget_failures,
         compression: &report.compression,
         label_generator: &report.label_generator,
+        duplicate_sources: report
+            .sources
+            .iter()
+            .filter(|s| s.duplicates.is_some())
+            .collect(),
         bundles: report
             .bundles
             .iter()
@@ -175,6 +181,11 @@ pub fn treemap_with_inspector(report: &Report, include_inspector: bool) -> Resul
         budget_failures: &report.budget_failures,
         compression: &report.compression,
         label_generator: &report.label_generator,
+        duplicate_sources: report
+            .sources
+            .iter()
+            .filter(|s| s.duplicates.is_some())
+            .collect(),
         bundles: report
             .bundles
             .iter()
