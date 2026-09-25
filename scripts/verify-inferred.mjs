@@ -179,6 +179,15 @@ try {
   } finally {
     await browser.close()
   }
+  // Scenarios accumulate in one directory until the site serves a different copy of a script.
+  const flows = join(out, 'flows')
+  for (const scenario of ['first', 'second']) await cli('snapshot', '--url', origin + '/', '--out', flows, '--wait-ms', '0', '--scenario', scenario)
+  const first = JSON.parse(await readFile(join(flows, 'coverage', 'first.json'), 'utf8'))
+  const second = JSON.parse(await readFile(join(flows, 'coverage', 'second.json'), 'utf8'))
+  assert.equal(first.length, second.length)
+  assert.equal(JSON.parse(await readFile(join(flows, 'loading.json'), 'utf8')).bundles[`${host}/a/chunk.js`].load, 'html')
+  pages['/a/dyn.js'][1] = 'window.dyn=2'
+  await assert.rejects(cli('snapshot', '--url', origin + '/', '--out', flows, '--wait-ms', '500', '--scenario', 'third'), /dyn\.js differs from the copy an earlier snapshot saved/)
   console.log('verified snapshot, module recovery, labeling and annotated reports')
 } finally {
   site.close()

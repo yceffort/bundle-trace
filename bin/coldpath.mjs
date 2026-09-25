@@ -16,7 +16,7 @@ const usage = `Usage:
                    [--cdn-prefix URL]... [--device NAME] [--viewport WxH] [--user-agent UA] [--device-scale-factor N] [--mobile] [--touch]
                    [--latency-ms N --download-kbps N --upload-kbps N] [--cpu-slowdown N] [--storage-state FILE]
   coldpath graph --format esbuild|webpack|turbopack --input FILE --root BUILD_ROOT --out graph.json [--environment client|server|all]
-  coldpath snapshot --url URL --out DIRECTORY [--wait-ms N] [--actions FILE]
+  coldpath snapshot --url URL --out DIRECTORY [--wait-ms N] [--actions FILE] [--scenario NAME]
   coldpath modules --dir DIRECTORY --out MAP_DIRECTORY [--maps-json maps.json]... [--chunks]
   coldpath label --report report.json --out labels.json [--mode identify|describe] [--provider anthropic|openai]
                  [--model NAME] [--base-url URL] [--top N] [--lang LANGUAGE]
@@ -74,7 +74,7 @@ async function main() {
   }
   if (command === 'snapshot') {
     const {values} = parseArgs({args: rest, options: {
-      url: {type: 'string'}, out: {type: 'string'}, 'wait-ms': {type: 'string'}, actions: {type: 'string'},
+      url: {type: 'string'}, out: {type: 'string'}, 'wait-ms': {type: 'string'}, actions: {type: 'string'}, scenario: {type: 'string'},
     }})
     await snapshot({...values, waitMs: values['wait-ms'] === undefined ? undefined : Number(values['wait-ms'])})
     return 0
