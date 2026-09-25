@@ -27,12 +27,21 @@ Use `--url-prefix http://` for plain HTTP sites. Both prefixes may be passed.
 
 ## snapshot
 
-`coldpath snapshot --url URL --out DIRECTORY [--wait-ms N] [--actions FILE]` loads the page once in Chromium with precise V8 coverage, waits for `load` plus `--wait-ms` (default 5,000), runs an optional action module (the same `{page, context}` interface as [`collect`](collecting.md#custom-interactions)), and writes:
+`coldpath snapshot --url URL --out DIRECTORY [--wait-ms N] [--actions FILE] [--scenario NAME]` loads the page once in Chromium with precise V8 coverage, waits for `load` plus `--wait-ms` (default 5,000), runs an optional action module (the same `{page, context}` interface as [`collect`](collecting.md#custom-interactions)), and writes:
 
 - `files/<host>/<path>`: the exact text of every external `.js`, `.mjs`, and `.cjs` script. Coverage is Playwright-format with source text, so the analyzer compares each file with what was recorded.
 - `coverage.json`: the recording. Inline scripts are left out.
 - `maps.json`: explicit map bindings for scripts that declare a `sourceMappingURL`. A map the snapshot could fetch is saved at its own URL path under `files/`, so relative source paths inside it resolve as they would on the site. A declared map that could not be fetched is bound to an empty map under `maps/`, so the analyzer treats the script as unmapped instead of failing. The analyzer itself never fetches.
 - `loading.json`: why each script loaded (see below).
+
+With `--scenario NAME`, the recording goes to `coverage/NAME.json` instead, and repeated snapshots into the same directory accumulate: scripts, map bindings, and load causes from earlier visits are kept, and a later visit only adds scripts it saw first. If the site serves a script whose text differs from the copy already saved, the snapshot fails, because recordings of different builds cannot be combined. Each visit starts a fresh browser, so an interaction scenario also contains its own initial load. Pass the recordings in visit order, with the analyzer's scenario name being the file name:
+
+```sh
+for s in initial search; do coldpath snapshot --url https://example.com/ --out artifacts/site --scenario $s $([ $s = search ] && echo --actions search.mjs); done
+coldpath analyze --dir artifacts/site/files --url-prefix https:// \
+  --coverage artifacts/site/coverage/initial.json --coverage artifacts/site/coverage/search.json \
+  --initial-scenario initial.json --scenario-order initial.json,search.json ...
+```
 
 Unlike `collect`, `snapshot` does not block cross-origin requests and has no local build to check against: the saved text is the only evidence of what ran. Keep the snapshot directory together; a later visit may serve different files.
 
