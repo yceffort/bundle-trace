@@ -21,7 +21,13 @@ Early-stage software: the CLI and JSON schema may change. Unobserved bytes are c
 
 ## Install
 
-Requires Rust 1.88 or newer. Install from GitHub:
+```sh
+npm install --save-dev coldpath
+```
+
+The npm package includes a prebuilt analyzer for macOS (arm64, x64) and Linux (arm64, x64; glibc 2.35 or newer) through an optional `coldpath-<platform>-<arch>` dependency. It puts the collector, graph export, and analyzer behind one `coldpath` command, and exports `coldpath/rollup`, `coldpath/vite`, and `coldpath/webpack` graph plugins. Collection additionally needs `playwright` in your project.
+
+On other platforms, or to use the analyzer without Node.js, build it with Rust 1.88 or newer:
 
 ```sh
 cargo install --git https://github.com/yceffort/coldpath --locked
@@ -36,18 +42,16 @@ cargo build --locked --release
 ./target/release/coldpath --help
 ```
 
-The project is not published to crates.io or npm yet. Node.js is only needed for optional collection, graph export, and integration tests.
+The analyzer is not published to crates.io. Node.js is only needed for collection, graph export, labeling, and integration tests.
 
 ### Node package
-
-The repository root is the `coldpath` npm package. It puts the collector, graph export, and analyzer behind one command, and exports `coldpath/rollup`, `coldpath/vite`, and `coldpath/webpack` graph plugins. Collection additionally needs `playwright` in your project.
 
 ```sh
 coldpath collect --scenarios coldpath.scenarios.json
 coldpath analyze --scenarios coldpath.scenarios.json --graph dist/assets/coldpath.graph.json --treemap artifacts/actions.html
 ```
 
-`coldpath analyze` (or `coldpath` with analyzer options) runs the Rust analyzer from `COLDPATH_ANALYZER`, the `coldpath-<platform>-<arch>` package that `scripts/pack-native.mjs` builds, or the native `coldpath` binary on `PATH` (the npm wrapper skips itself), in that order. See [collecting coverage](docs/collecting.md#scenario-files) for the scenario file.
+`coldpath analyze` (or `coldpath` with analyzer options) runs the Rust analyzer from `COLDPATH_ANALYZER`, the installed `coldpath-<platform>-<arch>` package, or the native `coldpath` binary on `PATH` (the npm wrapper skips itself), in that order. See [collecting coverage](docs/collecting.md#scenario-files) for the scenario file.
 
 ## Try the recorded example
 

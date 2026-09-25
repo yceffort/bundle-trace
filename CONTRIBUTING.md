@@ -52,3 +52,7 @@ The project analyzes generated JavaScript bytes. It does not currently produce I
 Changes to the CLI or JSON schema should update the usage guide. Contributions are distributed under the project's MIT license.
 
 Graph changes require `pnpm test:corpus`. CI runs the corpus on Linux and macOS. The Next.js fixture deliberately retains a known source-map attribution limitation; `fixtures/corpus/expectations.json` bounds probe errors. Do not raise that bound or alter probes simply to hide failures. Inspect the generated code and map, publish any changed limitations, and update the documented snapshot when intentionally upgrading pinned bundlers.
+
+## Releasing
+
+Set `version` in `package.json` and `Cargo.toml`, commit, and push a matching `v<version>` tag. `.github/workflows/release.yml` builds and tests the analyzer on macOS arm64/x64 and Linux arm64/x64, publishes each `coldpath-<platform>-<arch>` package, adds them to `coldpath`'s `optionalDependencies` (`scripts/release-manifest.mjs`), publishes `coldpath` with npm provenance, and creates a GitHub release. It needs an npm automation token in the `NPM_TOKEN` repository secret.
