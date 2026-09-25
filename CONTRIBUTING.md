@@ -23,19 +23,20 @@ pnpm test:browser
 pnpm test:corpus
 ```
 
-Use Node.js 24+ and the pnpm version in `package.json`. JavaScript dependencies are development-only. Generated verification files belong in the ignored `artifacts/` directory.
+Use Node.js 24+ and the pnpm version in `package.json`. The repository root is the published `coldpath` npm package: `bin/` and `lib/` ship, and only `@babel/parser` is a runtime dependency (Playwright is an optional peer). Everything else is development-only. Generated verification files belong in the ignored `artifacts/` directory.
 
 ## Test boundaries
 
 - `tests/analysis.rs`: nested V8 ranges, Unicode offsets, source maps, verification evidence, filters, compression, reports, and budget exits.
 - `scripts/verify.mjs`: captures actual Chromium coverage and compares every interval with an independent per-code-unit reference implementation.
 - `scripts/verify-formats.mjs`: imports real Playwright and Node coverage, validates Chrome-shaped input, and exercises the offline HTML UI and embedded-data escaping.
-- `scripts/verify-collector.mjs`: runs the collector as a separate process against a local fixture, including a custom interaction and stale-source rejection.
+- `scripts/verify-collector.mjs`: runs `coldpath collect` as a separate process against a local fixture, including a custom interaction and stale-source rejection.
 - `scripts/verify-treemap.mjs`: checks hierarchical navigation, complete small-file access, area totals, coverage colors/data, search, package grouping, keyboard navigation, offline operation, and mobile layout.
 - `scripts/verify-comparison.mjs`: three ordered scenario colors, missing initial evidence, baseline changes, graph locations, estimates, recommendations, scenario-specific inspection, and mobile/offline behavior.
 - `tests/workflows.rs`: scenario ordering/Unicode partitions, missing measurements, compression fragments, graph path selection/validation, actionable evidence, and coverage budget failures.
 - `scripts/verify-graphs.mjs`: import declaration versus usage positions, type-only syntax, source snapshot evidence, and malformed Turbopack graph rejection.
-- `scripts/verify-corpus.mjs`: real esbuild, Rollup, Vite, webpack, and Next/Turbopack builds, native Chromium recordings, independent map oracle and known-origin probes, graph location assertions, plus a source-ownership negative control. [Published results and limitations](docs/accuracy-corpus.md).
+- `scripts/verify-corpus.mjs`: real esbuild, Rollup, Vite, webpack, and Next/Turbopack builds, native Chromium recordings, independent map oracle and known-origin probes, graph location assertions, plus a source-ownership negative control. Rollup, Vite, and webpack graphs come from the `coldpath/rollup`, `coldpath/vite`, and `coldpath/webpack` exports. [Published results and limitations](docs/accuracy-corpus.md).
+- `scripts/verify-package.mjs`: packs `coldpath` and a platform analyzer package, installs both into a fresh npm project, and runs the Rollup plugin, `coldpath graph`, `coldpath collect --scenarios`, and `coldpath analyze --scenarios` there.
 
 Do not format or regenerate `examples/recorded/entry.js` or its map as a cosmetic edit. Their exact bytes are part of the recorded coverage's SHA-256 evidence. Source fixtures for new captures live in `fixtures/`.
 

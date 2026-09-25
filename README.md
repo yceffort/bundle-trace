@@ -36,7 +36,18 @@ cargo build --locked --release
 ./target/release/bundle-trace --help
 ```
 
-The project is not published to crates.io or npm. Node.js is only needed for optional collection, graph export, and integration tests.
+The project is not published to crates.io or npm yet. Node.js is only needed for optional collection, graph export, and integration tests.
+
+### Node package
+
+The repository root is the `coldpath` npm package. It puts the collector, graph export, and analyzer behind one command, and exports `coldpath/rollup`, `coldpath/vite`, and `coldpath/webpack` graph plugins. Collection additionally needs `playwright` in your project.
+
+```sh
+coldpath collect --scenarios coldpath.scenarios.json
+coldpath analyze --scenarios coldpath.scenarios.json --graph dist/assets/coldpath.graph.json --treemap artifacts/actions.html
+```
+
+`coldpath analyze` (or `coldpath` with analyzer options) runs the Rust analyzer from `COLDPATH_ANALYZER`, the `coldpath-<platform>-<arch>` package that `scripts/pack-native.mjs` builds, or `bundle-trace` on `PATH`, in that order. See [collecting coverage](docs/collecting.md#scenario-files) for the scenario file.
 
 ## Try the recorded example
 
@@ -119,14 +130,14 @@ Scenario order is explicit, not inferred from timestamps. Standard coverage expo
 
 ## Collect a browser scenario
 
-The optional collector requires Node.js 24+, pnpm 12.1.0, and Chromium:
+The optional collector requires Node.js 24+, Playwright, and Chromium:
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
+npm install --save-dev playwright
+npx playwright install chromium
 
 # Serve the same build locally in another terminal.
-node scripts/collect.mjs \
+coldpath collect \
   --url http://127.0.0.1:3000/ \
   --dir path/to/dist/assets \
   --prefix /assets/ \
@@ -169,6 +180,7 @@ pnpm install --frozen-lockfile
 pnpm exec playwright install chromium
 pnpm test:browser
 pnpm test:corpus
+pnpm test:package
 ```
 
 CI runs Rust tests on Linux and macOS, checks the minimum Rust version on Linux, and exercises the HTML report, input adapters, collector, and five real bundler builds in Chromium on both platforms. See [CONTRIBUTING.md](CONTRIBUTING.md) for test boundaries and fixtures.

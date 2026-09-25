@@ -108,10 +108,14 @@ settings:
 importers:
 
   .:
-    devDependencies:
+    dependencies:
       '@babel/parser':
         specifier: 7.29.9
         version: 7.29.9
+      playwright:
+        specifier: '>=1.40'
+        version: 1.63.0
+    devDependencies:
       '@jridgewell/trace-mapping':
         specifier: 0.3.31
         version: 0.3.31

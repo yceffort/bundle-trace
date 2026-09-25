@@ -62,7 +62,7 @@ pub fn attach(
     build_root: &Path,
 ) -> Result<()> {
     let graph: Graph = serde_json::from_slice(data).context(
-        "invalid graph; export with scripts/export-graph.mjs or scripts/rollup-graph.mjs",
+        "invalid graph; export with coldpath graph or the coldpath/rollup, coldpath/vite, or coldpath/webpack plugins",
     )?;
     ensure!(
         graph.schema_version == 1,

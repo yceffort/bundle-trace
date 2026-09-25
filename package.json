@@ -1,17 +1,46 @@
 {
-  "name": "bundle-trace-dev",
-  "private": true,
+  "name": "coldpath",
+  "version": "0.1.0",
+  "description": "Trace which bundled JavaScript executes in real browser scenarios and why it is loaded",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yceffort/bundle-trace.git"
+  },
   "type": "module",
+  "bin": {
+    "coldpath": "bin/coldpath.mjs"
+  },
+  "exports": {
+    "./rollup": "./lib/rollup.mjs",
+    "./vite": "./lib/rollup.mjs",
+    "./webpack": "./lib/webpack.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "lib"
+  ],
   "scripts": {
     "build": "cargo build --locked --release",
-    "test": "cargo test --locked && pnpm test:browser && pnpm test:corpus",
+    "test": "cargo test --locked && pnpm test:browser && pnpm test:corpus && pnpm test:package",
     "test:corpus": "node scripts/verify-graphs.mjs && node scripts/verify-corpus.mjs",
     "test:browser": "node scripts/verify.mjs && node scripts/verify-formats.mjs && node scripts/verify-collector.mjs && node scripts/verify-treemap.mjs && node scripts/verify-comparison.mjs",
-    "collect": "node scripts/collect.mjs"
+    "collect": "node bin/coldpath.mjs collect",
+    "test:package": "node scripts/verify-package.mjs"
+  },
+  "dependencies": {
+    "@babel/parser": "7.29.9"
+  },
+  "peerDependencies": {
+    "playwright": ">=1.40"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@babel/parser": "7.29.9",
     "@jridgewell/trace-mapping": "0.3.31",
     "@playwright/test": "1.63.0",
     "esbuild": "0.28.2",

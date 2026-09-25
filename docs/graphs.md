@@ -1,6 +1,6 @@
 # Bundler graph adapters
 
-Graph export is optional and requires the checkout's Node dependencies (`pnpm install --frozen-lockfile`). The Rust analyzer consumes the exported JSON offline. Source maps alone cannot recover dependency edges or import locations.
+Graph export is optional and uses the `coldpath` package (`coldpath graph` and the bundler plugins). The Rust analyzer consumes the exported JSON offline. Source maps alone cannot recover dependency edges or import locations.
 
 ```sh
 bundle-trace --dir dist --graph artifacts/graph.json --graph-root . \
@@ -16,7 +16,7 @@ bundle-trace --dir dist --graph artifacts/graph.json --graph-root . \
 Enable `metafile: true` (or `--metafile=meta.json`) in your real build, then:
 
 ```sh
-node /path/to/bundle-trace/scripts/export-graph.mjs \
+coldpath graph \
   --format esbuild --input meta.json --root /path/to/project --out artifacts/graph.json
 ```
 
@@ -24,7 +24,18 @@ The adapter takes edges and import kinds from the metafile and parses source syn
 
 ## webpack
 
-Export stats with modules, nested modules, reasons, and child compilations. Avoid grouped or truncated module lists. With the webpack Node API, write the result of:
+Add the plugin to your webpack configuration. After a successful build it writes `coldpath.graph.json` to the output directory. Optional `root` defaults to webpack's `context`, and `fileName` changes the output name:
+
+```js
+import ColdpathGraphPlugin from 'coldpath/webpack'
+
+export default {
+  devtool: 'source-map',
+  plugins: [new ColdpathGraphPlugin()],
+}
+```
+
+To export from saved stats instead, include modules, nested modules, reasons, and child compilations. Avoid grouped or truncated module lists. With the webpack Node API, write the result of:
 
 ```js
 stats.toJson({
@@ -35,7 +46,7 @@ stats.toJson({
 ```
 
 ```sh
-node /path/to/bundle-trace/scripts/export-graph.mjs \
+coldpath graph \
   --format webpack --input stats.json --root /path/to/project --out artifacts/graph.json
 ```
 
@@ -48,16 +59,16 @@ See webpack's [stats format](https://webpack.js.org/api/stats/) for the underlyi
 Put the exporter early in your plugin list. It uses actual resolved module IDs and records import syntax before later transformations where possible:
 
 ```js
-import bundleTraceGraph from '/path/to/bundle-trace/scripts/rollup-graph.mjs'
+import coldpathGraph from 'coldpath/rollup' // or 'coldpath/vite'
 
 export default {
   // Rollup: also configure input/output and sourcemap: true.
   // Vite: configure build: { sourcemap: true }.
-  plugins: [bundleTraceGraph({root: '/path/to/project'})],
+  plugins: [coldpathGraph({root: '/path/to/project'})],
 }
 ```
 
-The build emits `bundle-trace.graph.json` next to output chunks. Vite supplies its configured project root automatically. Pass that asset to `--graph`. Optional `fileName` changes its output name. The plugin uses [Rollup module information and resolution hooks](https://rollupjs.org/plugin-development/); the real-build corpus also exercises Vite 8's Rolldown implementation.
+The build emits `coldpath.graph.json` next to output chunks. Vite supplies its configured project root automatically. Pass that asset to `--graph`. Optional `fileName` changes its output name. The plugin uses [Rollup module information and resolution hooks](https://rollupjs.org/plugin-development/); the real-build corpus also exercises Vite 8's Rolldown implementation.
 
 Locations tagged `plugin-input` refer to the text seen by this plugin. Earlier transforms can affect them. Literal imports/reexports and `require()` are parsed; computed dynamic expressions remain without a location when they cannot be resolved exactly. Type-only imports are excluded.
 
@@ -67,7 +78,7 @@ Tested with **Next.js 16.3.6**. Enable production browser source maps in Next co
 
 ```sh
 pnpm exec next experimental-analyze --output
-node /path/to/bundle-trace/scripts/export-graph.mjs \
+coldpath graph \
   --format turbopack --input .next/diagnostics/analyze \
   --root /path/to/turbopack-root --out artifacts/graph.json
 pnpm exec next build

@@ -29,7 +29,8 @@ const server = createServer((request, response) => {
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 try {
   const args = [
-    join(root, 'scripts', 'collect.mjs'),
+    join(root, 'bin', 'coldpath.mjs'),
+    'collect',
     '--url',
     `http://127.0.0.1:${server.address().port}/`,
     '--dir',

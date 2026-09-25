@@ -1,20 +1,20 @@
 # Collecting coverage
 
-The Rust analyzer reads saved recordings. You can use your own tooling to create a [supported input](usage.md#coverage-inputs), or use this repository's optional Playwright/Chromium collector.
+The Rust analyzer reads saved recordings. You can use your own tooling to create a [supported input](usage.md#coverage-inputs), or use the optional Playwright/Chromium collector, `coldpath collect`.
 
 ## Setup
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
+npm install --save-dev playwright
+npx playwright install chromium
 ```
 
-Use Node.js 24+ and pnpm 12.1.0. On Linux CI, `pnpm exec playwright install --with-deps chromium` also installs Chromium's system dependencies.
+Use Node.js 24+. On Linux CI, `npx playwright install --with-deps chromium` also installs Chromium's system dependencies. Playwright is an optional peer dependency of `coldpath`; only collection needs it.
 
 Build with source maps, serve that build, and keep the exact generated files available on disk. For example, if `/assets/app.js` is served from `dist/assets/app.js`:
 
 ```sh
-node scripts/collect.mjs \
+coldpath collect \
   --url http://127.0.0.1:3000/ \
   --dir dist/assets \
   --prefix /assets/ \
@@ -42,7 +42,7 @@ export default async function ({ page }) {
 ```
 
 ```sh
-node scripts/collect.mjs \
+coldpath collect \
   --url http://127.0.0.1:3000/ \
   --dir dist/assets --prefix /assets/ \
   --scenario search --actions scenarios/search.mjs \
@@ -55,6 +55,31 @@ bundle-trace --dir dist/assets \
 ```
 
 The module runs as local Node.js code. Paths are resolved from the current working directory. Each collector invocation launches a fresh browser, so an interaction recording also contains its initial page load. Keep interactions in the existing page; cross-document navigation can discard script sources before they are saved. Record separate full-page navigations in separate invocations.
+
+## Scenario files
+
+A scenario file records several scenarios in order and gives the analyzer the matching order:
+
+```json
+{
+  "url": "http://127.0.0.1:3000/",
+  "dir": "dist/assets",
+  "prefix": "/assets/",
+  "out": "artifacts/coverage",
+  "scenarios": [
+    {"name": "initial"},
+    {"name": "search", "actions": "scenarios/search.mjs"},
+    {"name": "settings", "url": "/settings"}
+  ]
+}
+```
+
+```sh
+coldpath collect --scenarios coldpath.scenarios.json
+coldpath analyze --scenarios coldpath.scenarios.json --html artifacts/combined.html
+```
+
+`collect` writes `<out>/<name>.coverage.json` for each scenario (default `out`: `coldpath-coverage`). `analyze` adds `--dir`, one `--coverage` per scenario, `--scenario-order` in file order, and `--initial-scenario` set to the first scenario unless you pass it, then forwards your other options. Paths are relative to the scenario file. A scenario `url` resolves against the top-level `url`; `prefix` and `waitMs` can be set at the top level or per scenario. Names may contain letters, digits, `_`, `.`, and `-`.
 
 ## What is recorded
 

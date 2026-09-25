@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {mkdtemp, writeFile, rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {enrichLocations, importSites, webpackGraph, turbopackGraph} from './graph-utils.mjs'
+import {enrichLocations, importSites, webpackGraph, turbopackGraph} from '../lib/graph.mjs'
 
 const root = await mkdtemp(join(tmpdir(), 'bundle-trace-graphs-'))
 try {

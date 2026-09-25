@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url'
 import {chromium} from '@playwright/test'
 import {build} from 'esbuild'
 
-import {readMap} from './maps.mjs'
+import {readMap} from '../lib/maps.mjs'
 import {checkShiftedIntervalRejection, verifyReport} from './reference.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))

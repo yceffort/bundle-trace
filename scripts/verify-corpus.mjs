@@ -12,10 +12,12 @@ import {rollup} from 'rollup'
 import {build as vite} from 'vite'
 import webpack from 'webpack'
 import {AnyMap, originalPositionFor, decodedMappings, LEAST_UPPER_BOUND} from '@jridgewell/trace-mapping'
-import graphPlugin from './rollup-graph.mjs'
-import {esbuildGraph, webpackGraph, turbopackGraph, enrichLocations, sha256} from './graph-utils.mjs'
+import graphPlugin from 'coldpath/rollup'
+import vitePlugin from 'coldpath/vite'
+import ColdpathGraphPlugin from 'coldpath/webpack'
+import {esbuildGraph, turbopackGraph, enrichLocations, sha256} from '../lib/graph.mjs'
 import {assertIntervals} from './reference.mjs'
-import {readMap} from './maps.mjs'
+import {readMap} from '../lib/maps.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(import.meta.url)
@@ -37,7 +39,7 @@ const save = async (filename, value) => { await mkdir(dirname(filename), {recurs
 async function finish(name, dir, entry, graph, graphRoot = project) {
   const graphFile = join(work, name + '.graph.json')
   if (graph) await save(graphFile, await enrichLocations(graph, graphRoot))
-  else await copyFile(join(dir, 'bundle-trace.graph.json'), graphFile)
+  else await copyFile(join(dir, 'coldpath.graph.json'), graphFile)
   if (entry) await writeFile(join(dir, 'index.html'), `<!doctype html><meta charset="utf-8"><script type="module" src="/${entry}"></script>`)
   artifacts.push({name, dir, graphFile, graphRoot})
 }
@@ -55,20 +57,17 @@ await built.close()
 await finish('rollup', rollupDir, 'entry/main.js')
 
 const viteDir = join(work, 'vite')
-await vite({root: project, logLevel: 'warn', plugins: [graphPlugin()], build: {outDir: viteDir, emptyOutDir: true,
+await vite({root: project, logLevel: 'warn', plugins: [vitePlugin()], build: {outDir: viteDir, emptyOutDir: true,
   sourcemap: true, rollupOptions: {output: {entryFileNames: 'entry/[name]-[hash].js', chunkFileNames: 'chunks/deep/[name]-[hash].js'}}}})
 await finish('vite', viteDir, null)
 
 const webpackDir = join(work, 'webpack')
 const compiler = webpack({mode: 'production', context: project, entry: './src/entry.js', devtool: 'source-map',
   output: {path: webpackDir, filename: 'entry/main.js', chunkFilename: 'chunks/deep/[name].js', publicPath: '/'},
-  optimization: {concatenateModules: true}})
-const stats = await new Promise((resolve, reject) => compiler.run((error, stats) => error || stats.hasErrors() ? reject(error || new Error(stats.toString())) : resolve(stats)))
+  optimization: {concatenateModules: true}, plugins: [new ColdpathGraphPlugin()]})
+await new Promise((resolve, reject) => compiler.run((error, stats) => error || stats.hasErrors() ? reject(error || new Error(stats.toString())) : resolve(stats)))
 await new Promise((resolve, reject) => compiler.close((error) => error ? reject(error) : resolve()))
-const statsData = stats.toJson({all: false, modules: true, nestedModules: true, reasons: true, children: true,
-  groupModulesByType: false, groupModulesByPath: false, groupModulesByAttributes: false, ids: true})
-await save(join(work, 'webpack.stats.json'), statsData)
-await finish('webpack', webpackDir, 'entry/main.js', webpackGraph(statsData, project))
+await finish('webpack', webpackDir, 'entry/main.js')
 
 const nextProject = join(project, 'next')
 await mkdir(join(nextProject, 'pages'), {recursive: true})
