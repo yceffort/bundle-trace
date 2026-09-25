@@ -432,6 +432,39 @@ fn graph_source_hashes_reject_stale_locations_and_keep_compact_exports_compact()
 }
 
 #[test]
+fn label_evidence_is_checked_per_copy_of_a_differently_minified_source() {
+    let f = Fixture::new();
+    for (file, text) in [("a.js", "var q=1;"), ("b.js", "var z=1;")] {
+        f.write(file, text);
+        f.write(&format!("{file}.map"), &json!({"version":3,"sources":["m/shared.js"],"sourcesContent":[text],"names":[],"mappings":"AAAA"}).to_string());
+    }
+    let mut report = analyze_with_options(&f.0, &[], &AnalyzeOptions::default()).unwrap();
+    let labels = json!({"schemaVersion":1,"sources":{"m/shared.js":{"name":"n","evidence":["var q","var z","nowhere"]}}});
+    coldpath::annotations::attach_labels(&mut report, labels.to_string().as_bytes()).unwrap();
+    let value = serde_json::to_value(&report).unwrap();
+    let copy = |path: &str| {
+        value["bundles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|b| b["path"] == path)
+            .unwrap()["sources"][0]["label"]["evidence"]
+            .clone()
+    };
+    assert_eq!(copy("a.js"), json!(["var q"]));
+    assert_eq!(copy("b.js"), json!(["var z"]));
+    assert_eq!(
+        value["sources"][0]["label"]["evidence"],
+        json!(["var q", "var z"])
+    );
+    assert!(
+        value["warnings"]
+            .to_string()
+            .contains("m/shared.js: dropped 1 label evidence strings not found in any copy")
+    );
+}
+
+#[test]
 fn labels_and_loading_attach_without_changing_counts_and_drop_absent_evidence() {
     let f = Fixture::new();
     let source = "var a=1;var b=2;";

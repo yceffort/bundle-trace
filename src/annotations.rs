@@ -98,44 +98,38 @@ pub fn attach_labels(report: &mut Report, data: &[u8]) -> Result<()> {
         "unsupported --labels schemaVersion {}",
         file.schema_version
     );
-    let mut labels = file.sources;
-    let mut dropped = BTreeMap::<String, usize>::new();
+    let labels = file.sources;
+    // Bundlers may emit one module into several chunks, minified differently: check each copy on its own.
+    let mut copies = BTreeMap::<String, Vec<String>>::new();
     for bundle in &mut report.bundles {
         for source in &mut bundle.sources {
-            let Some(label) = labels.get_mut(&source.source) else {
+            let Some(label) = labels.get(&source.source) else {
                 continue;
             };
-            if let Some(content) = &source.content {
-                let found = |e: &String| content.contains(e.as_str());
-                let before = label.evidence.len()
-                    + label
-                        .contents
-                        .iter()
-                        .map(|p| p.evidence.len())
-                        .sum::<usize>();
-                label.evidence.retain(found);
-                for part in &mut label.contents {
-                    part.evidence.retain(found);
+            source.label = Some(match &source.content {
+                Some(content) => {
+                    copies
+                        .entry(source.source.clone())
+                        .or_default()
+                        .push(content.clone());
+                    keep_evidence(label, |e| content.contains(e))
                 }
-                label.contents.retain(|part| !part.evidence.is_empty());
-                let after = label.evidence.len()
-                    + label
-                        .contents
-                        .iter()
-                        .map(|p| p.evidence.len())
-                        .sum::<usize>();
-                *dropped.entry(source.source.clone()).or_default() += before - after;
-            }
-            source.label = Some(label.clone());
+                None => label.clone(),
+            });
         }
     }
-    for (source, count) in dropped.into_iter().filter(|(_, n)| *n > 0) {
-        report.warnings.push(format!(
-            "{source}: dropped {count} label evidence strings not found in its source content"
-        ));
-    }
     let mut unmatched = 0;
-    for (name, label) in labels {
+    for (name, mut label) in labels {
+        if let Some(texts) = copies.get(&name) {
+            let kept = keep_evidence(&label, |e| texts.iter().any(|text| text.contains(e)));
+            let dropped = evidence_count(&label) - evidence_count(&kept);
+            if dropped > 0 {
+                report.warnings.push(format!(
+                    "{name}: dropped {dropped} label evidence strings not found in any copy of its source content"
+                ));
+            }
+            label = kept;
+        }
         match report.sources.iter_mut().find(|row| row.source == name) {
             Some(row) => row.label = Some(label),
             None => unmatched += 1,
@@ -148,6 +142,26 @@ pub fn attach_labels(report: &mut Report, data: &[u8]) -> Result<()> {
     }
     report.label_generator = file.generator;
     Ok(())
+}
+
+/// Keep only evidence `found` accepts; chunk parts left without evidence are removed.
+fn keep_evidence(label: &SourceLabel, found: impl Fn(&str) -> bool) -> SourceLabel {
+    let mut label = label.clone();
+    label.evidence.retain(|e| found(e));
+    for part in &mut label.contents {
+        part.evidence.retain(|e| found(e));
+    }
+    label.contents.retain(|part| !part.evidence.is_empty());
+    label
+}
+
+fn evidence_count(label: &SourceLabel) -> usize {
+    label.evidence.len()
+        + label
+            .contents
+            .iter()
+            .map(|part| part.evidence.len())
+            .sum::<usize>()
 }
 
 /// Attach load causes keyed by analysis-root-relative bundle path.
