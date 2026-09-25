@@ -27,9 +27,11 @@ const modules = {
 const chunk = `(self.webpackChunk_test=self.webpackChunk_test||[]).push([[1],{${Object.entries(modules).map(([id, code]) => `${id}:${code}`).join(',')}}]);
 (function(){var m=self.webpackChunk_test[0][1],x={};m[10](x);var s=document.createElement("script");s.src="/a/"+"dy"+"n.js";document.head.append(s)})()
 //# sourceMappingURL=chunk.js.map`
+const turbo = '(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,20,e=>{e.x="turbo-sentinel"},"21",function(e){\n  e.y=1\n}]);'
 const pages = {
-  '/': ['text/html', '<!doctype html><meta charset="utf-8"><script src="/a/chunk.js"></script><script>var s=document.createElement("script");s.src="/a/late.js";document.head.append(s)</script>'],
+  '/': ['text/html', '<!doctype html><meta charset="utf-8"><script src="/a/chunk.js"></script><script src="/a/turbo.js"></script><script>var s=document.createElement("script");s.src="/a/late.js";document.head.append(s)</script>'],
   '/a/chunk.js': ['text/javascript', chunk],
+  '/a/turbo.js': ['text/javascript', turbo],
   '/a/dyn.js': ['text/javascript', 'window.dyn=1'],
   '/a/late.js': ['text/javascript', 'window.late=1'],
 }
@@ -97,6 +99,12 @@ try {
   assert.equal(byId(10).unobservedBytes, 0, 'module 10 ran completely')
   assert(byId(11).unobservedBytes > byId(11).observedBytes, 'module 11 factory never ran')
   assert.equal(bundle.sources.reduce((sum, row) => sum + row.bytes, 0), bundle.bytes)
+  const turbopack = report.bundles.find((row) => row.path === `${host}/a/turbo.js`)
+  for (const [id, text] of [['20', '20,e=>{e.x="turbo-sentinel"}'], ['21', '"21",function(e){\n  e.y=1\n}']]) {
+    const row = turbopack.sources.find((source) => source.source === `webpack://inferred/TURBOPACK/${id}.js`)
+    assert.equal(row.content, text)
+    assert.equal(row.bytes, Buffer.byteLength(text.replaceAll('\n', '')), `Turbopack module ${id} bytes`)
+  }
 
   await run(process.execPath, [join(root, 'bin', 'coldpath.mjs'), 'label', '--report', join(out, 'report.json'), '--out', join(out, 'labels.json'),
     '--provider', 'openai', '--model', 'test-model', '--base-url', modelUrl + '/v1'], {env})
@@ -113,7 +121,7 @@ try {
   const described = JSON.parse(await readFile(join(out, 'described.json'), 'utf8'))
   assert.equal(described.generator.provider, 'anthropic')
   // Describe covers every source with content; here only recovered modules have content.
-  assert.equal(Object.keys(described.sources).length, Object.keys(modules).length)
+  assert.equal(Object.keys(described.sources).length, Object.keys(modules).length + 2)
   assert(Object.values(described.sources).every((row) => Object.keys(row).join() === 'summary'))
   assert(requests.some((row) => row.url === '/v1/messages'))
 
