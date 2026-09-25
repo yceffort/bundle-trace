@@ -124,6 +124,16 @@ Limitations:
 
 Identity guesses are checked mechanically. An evidence string is kept only if it has at least 6 characters, occurs in the source, and occurs in no more than `max(3, 0.5%)` of all sources in the report, which rejects boilerplate such as `"use strict"`. A guess with no remaining evidence, or with kind `unknown`, is discarded and only its summary is kept. For a chunk, each part is checked on its own: parts without evidence are dropped, and if none remain only the summary is kept. The analyzer checks evidence again against the source content when it attaches labels. None of this makes a guess correct: several strings can be distinctive and still point to the wrong package, and the model's summaries are not verified.
 
+### Measuring identification accuracy
+
+`node scripts/label-accuracy.mjs [label options]` (run after `pnpm test:corpus`, which builds the corpus) removes the source maps from the corpus's webpack and Next.js builds, runs `modules`, `analyze`, and `label` on them, and scores every guess against the package that the real maps say each module came from (`scripts/label-score.mjs`). It calls the model provider. It reports separately:
+
+- package or application: whether `kind` (`package` or `polyfill` versus anything else) matches whether the module's code lives under `node_modules`.
+- exact package: the package a guess names (`react-dom/client` names `react-dom`; scoped names are kept whole) must equal the owning package. Substring and same-family names do not count (`@snowplow/browser-tracker` is not `@snowplow/browser-tracker-core`); a different name counts only through an explicit alias passed to the scorer.
+- application features: counted, never scored, because there is no reference to check them against.
+
+Modules whose code comes from several packages, and guesses the evidence filter dropped, are counted and left out of both scores. `scripts/verify-label-score.mjs` holds the scorer's negative and positive controls.
+
 Providers:
 
 | `--provider` | Endpoint | Credentials |
