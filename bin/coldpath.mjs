@@ -1,9 +1,14 @@
 #!/usr/bin/env node
+import {readFile} from 'node:fs/promises'
+import {dirname, resolve} from 'node:path'
 import {parseArgs} from 'node:util'
 import {runAnalyzer} from '../lib/analyzer.mjs'
 import {collect} from '../lib/collect.mjs'
 import {exportGraph} from '../lib/export-graph.mjs'
+import {label} from '../lib/label.mjs'
+import {inferModules} from '../lib/modules.mjs'
 import {loadScenarios} from '../lib/scenarios.mjs'
+import {snapshot} from '../lib/snapshot.mjs'
 
 const usage = `Usage:
   coldpath collect --scenarios coldpath.scenarios.json
@@ -11,10 +16,14 @@ const usage = `Usage:
                    [--cdn-prefix URL]... [--device NAME] [--viewport WxH] [--user-agent UA] [--device-scale-factor N] [--mobile] [--touch]
                    [--latency-ms N --download-kbps N --upload-kbps N] [--cpu-slowdown N] [--storage-state FILE]
   coldpath graph --format esbuild|webpack|turbopack --input FILE --root BUILD_ROOT --out graph.json [--environment client|server|all]
-  coldpath analyze [--scenarios coldpath.scenarios.json] [ANALYZER OPTIONS...]
+  coldpath snapshot --url URL --out DIRECTORY [--wait-ms N] [--actions FILE]
+  coldpath modules --dir DIRECTORY --out MAP_DIRECTORY
+  coldpath label --report report.json --out labels.json [--mode identify|describe] [--provider anthropic|openai]
+                 [--model NAME] [--base-url URL] [--top N] [--lang LANGUAGE]
+  coldpath analyze [--scenarios coldpath.scenarios.json] [--maps-json maps.json]... [ANALYZER OPTIONS...]
   coldpath [ANALYZER OPTIONS...]
 
-Run \`coldpath analyze --help\` for analyzer options. See docs/collecting.md and docs/graphs.md.`
+Run \`coldpath analyze --help\` for analyzer options. See docs/collecting.md, docs/graphs.md and docs/third-party.md.`
 
 const [command, ...rest] = process.argv.slice(2)
 
@@ -63,7 +72,34 @@ async function main() {
     await exportGraph(values)
     return 0
   }
+  if (command === 'snapshot') {
+    const {values} = parseArgs({args: rest, options: {
+      url: {type: 'string'}, out: {type: 'string'}, 'wait-ms': {type: 'string'}, actions: {type: 'string'},
+    }})
+    await snapshot({...values, waitMs: values['wait-ms'] === undefined ? undefined : Number(values['wait-ms'])})
+    return 0
+  }
+  if (command === 'modules') {
+    const {values} = parseArgs({args: rest, options: {dir: {type: 'string'}, out: {type: 'string'}}})
+    await inferModules(values)
+    return 0
+  }
+  if (command === 'label') {
+    const {values} = parseArgs({args: rest, options: {
+      report: {type: 'string'}, out: {type: 'string'}, mode: {type: 'string'}, provider: {type: 'string'},
+      model: {type: 'string'}, 'base-url': {type: 'string'}, top: {type: 'string'}, lang: {type: 'string'},
+    }})
+    await label({...values, baseUrl: values['base-url']})
+    return 0
+  }
   const args = command === 'analyze' ? rest : [command, ...rest]
+  // Each maps.json maps bundle paths to map files relative to itself; later files override earlier ones.
+  const bindings = {}
+  for (let at; (at = args.indexOf('--maps-json')) >= 0;) {
+    const [, file] = args.splice(at, 2)
+    for (const [bundle, map] of Object.entries(JSON.parse(await readFile(file, 'utf8')))) bindings[bundle] = resolve(dirname(file), map)
+  }
+  args.push(...Object.entries(bindings).flatMap(([bundle, map]) => ['--map', `${bundle}=${map}`]))
   const at = args.indexOf('--scenarios')
   if (at < 0) return runAnalyzer(args)
   const [, file] = args.splice(at, 2)

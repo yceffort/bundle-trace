@@ -25,7 +25,7 @@
     "build": "cargo build --locked --release",
     "test": "cargo test --locked && pnpm test:browser && pnpm test:corpus && pnpm test:package",
     "test:corpus": "node scripts/verify-graphs.mjs && node scripts/verify-corpus.mjs",
-    "test:browser": "node scripts/verify.mjs && node scripts/verify-formats.mjs && node scripts/verify-collector.mjs && node scripts/verify-environment.mjs && node scripts/verify-flows.mjs && node scripts/verify-treemap.mjs && node scripts/verify-comparison.mjs",
+    "test:browser": "node scripts/verify.mjs && node scripts/verify-formats.mjs && node scripts/verify-collector.mjs && node scripts/verify-environment.mjs && node scripts/verify-flows.mjs && node scripts/verify-treemap.mjs && node scripts/verify-comparison.mjs && node scripts/verify-inferred.mjs",
     "collect": "node bin/coldpath.mjs collect",
     "test:package": "node scripts/verify-package.mjs"
   },
@@ -33,14 +33,19 @@
     "@babel/parser": "7.29.9"
   },
   "peerDependencies": {
-    "playwright": ">=1.40"
+    "playwright": ">=1.40",
+    "@anthropic-ai/sdk": ">=0.128"
   },
   "peerDependenciesMeta": {
     "playwright": {
       "optional": true
+    },
+    "@anthropic-ai/sdk": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
     "@jridgewell/trace-mapping": "0.3.31",
     "@playwright/test": "1.63.0",
     "esbuild": "0.28.2",
