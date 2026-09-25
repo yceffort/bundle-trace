@@ -257,7 +257,7 @@ For Next.js, use the build's static output directory with `--prefix /_next/stati
 
 ## Analyze a site you do not build
 
-Without source maps, `coldpath snapshot` records a deployed page's scripts, coverage, and what caused each script to load; `coldpath modules` recovers webpack module boundaries as synthetic sources; and `coldpath label` asks a language model (Anthropic or any OpenAI-compatible endpoint) to summarize those modules and guess what they are, keeping only guesses whose evidence strings occur in the module and are rare elsewhere. The treemap then groups bundles by load cause and marks guessed names as inferred. See [analyzing a site you do not build](docs/third-party.md).
+Without source maps, `coldpath snapshot` records a deployed page's scripts, coverage, and what caused each script to load; `coldpath modules` recovers webpack and Turbopack module boundaries as synthetic sources; and `coldpath label` asks a language model (Anthropic or any OpenAI-compatible endpoint) to summarize those modules and guess what they are, keeping only guesses whose evidence strings occur in the module and are rare elsewhere. The treemap then groups bundles by load cause and marks guessed names as inferred. See [analyzing a site you do not build](docs/third-party.md).
 
 ## Use in CI
 
