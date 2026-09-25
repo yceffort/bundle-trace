@@ -1,7 +1,7 @@
 // snapshot -> modules -> label -> analyze against a local site whose chunk has no reachable map.
 import assert from 'node:assert/strict'
 import {execFile, execFileSync} from 'node:child_process'
-import {mkdir, readFile, rm} from 'node:fs/promises'
+import {mkdir, readFile, rm, writeFile} from 'node:fs/promises'
 import {createServer} from 'node:http'
 import {join} from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -48,6 +48,13 @@ const pages = {
   '/a/mapped.js.map': ['application/json', JSON.stringify({version: 3, sources: ['src/mapped.ts'], sourcesContent: ['window.mapped = 1'], names: [], mappings: 'AAAA'})],
   '/a/dyn.js': ['text/javascript', 'window.dyn=1'],
   '/a/late.js': ['text/javascript', 'window.late=1'],
+  // A two-document flow: the click handler runs just before unloading, and shared.js runs different code per page.
+  '/start.html': ['text/html', '<!doctype html><a id="next" href="/second.html">next</a><script src="/f/leave.js"></script><script src="/f/shared.js"></script>'],
+  '/second.html': ['text/html', '<!doctype html><script src="/f/shared.js"></script><script src="/f/second.js"></script><script>var s=document.createElement("script");s.src="/f/"+"late2.js";document.head.append(s);window.x="late2.js"</script>'],
+  '/f/leave.js': ['text/javascript', 'function leaving(){return "leave-sentinel"}\ndocument.getElementById("next").onclick=()=>{window.left=leaving()}'],
+  '/f/shared.js': ['text/javascript', 'function onlySecond(){return 2}\nif(location.pathname==="/second.html")onlySecond()'],
+  '/f/second.js': ['text/javascript', 'window.second=1'],
+  '/f/late2.js': ['text/javascript', 'window.late2=1'],
 }
 const site = createServer((request, response) => {
   const page = pages[request.url]
@@ -207,6 +214,21 @@ try {
   } finally {
     await browser.close()
   }
+  // A full-page navigation: each document is recorded before it unloads, and load causes use that document's HTML.
+  const multi = join(out, 'multi')
+  await mkdir(multi, {recursive: true})
+  await writeFile(join(multi, 'next.mjs'), "export default async ({page}) => { await Promise.all([page.waitForURL('**/second.html'), page.click('#next')]); await page.waitForTimeout(300) }")
+  await cli('snapshot', '--url', origin + '/start.html', '--out', multi, '--wait-ms', '0', '--actions', join(multi, 'next.mjs'))
+  const multiLoading = JSON.parse(await readFile(join(multi, 'loading.json'), 'utf8')).bundles
+  assert.deepEqual(Object.fromEntries(['leave', 'shared', 'second', 'late2'].map((name) => [name, multiLoading[`${host}/f/${name}.js`]?.load])),
+    {leave: 'html', shared: 'html', second: 'html', late2: 'inline'}, 'second-page scripts are classified against the second document')
+  await cli('analyze', '--dir', join(multi, 'files'), '--coverage', join(multi, 'coverage.json'), '--url-prefix', 'http://', '--json', join(multi, 'report.json'))
+  const multiReport = JSON.parse(await readFile(join(multi, 'report.json'), 'utf8'))
+  const multiBundle = (name) => multiReport.bundles.find((row) => row.path === `${host}/f/${name}.js`)
+  assert.equal(multiBundle('leave').unobservedBytes, 0, 'code that ran just before unloading is recorded')
+  assert.equal(multiBundle('shared').unobservedBytes, 0, 'recordings of both documents are unioned')
+  assert.equal(multiBundle('second').unobservedBytes, 0)
+
   // Scenarios accumulate in one directory until the site serves a different copy of a script.
   const flows = join(out, 'flows')
   for (const scenario of ['first', 'second']) await cli('snapshot', '--url', origin + '/', '--out', flows, '--wait-ms', '0', '--scenario', scenario)
