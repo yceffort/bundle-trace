@@ -160,7 +160,7 @@ pub fn attach(
         .filter_map(|s| s.content.as_ref().map(|c| (&s.source, c)))
         .collect::<Vec<_>>();
     let mut verified = BTreeSet::new();
-    let mut unchecked = 0;
+    let (mut unchecked, mut on_disk_only) = (0, 0);
     for module in &graph.modules {
         let Some(expected) = &module.source_sha256 else {
             continue;
@@ -178,14 +178,23 @@ pub fn attach(
             unchecked += 1;
             continue;
         }
-        for (_, content) in matching {
-            ensure!(
-                crate::sha256(content.as_bytes()) == *expected,
-                "graph source snapshot differs from sourcesContent for {}; regenerate the graph from this build's sources",
-                module.source
-            );
+        if matching
+            .iter()
+            .all(|(_, content)| crate::sha256(content.as_bytes()) == *expected)
+        {
+            verified.insert(module.id.as_str());
+            continue;
         }
-        verified.insert(module.id.as_str());
+        // Loaders such as Babel replace sourcesContent with their own output. The graph
+        // still describes these sources when it matches the file on disk; its locations
+        // stay unverified against the maps.
+        ensure!(
+            std::fs::read(directory.join(&module.source))
+                .is_ok_and(|bytes| crate::sha256(&bytes) == *expected),
+            "graph source snapshot differs from sourcesContent for {}; regenerate the graph from this build's sources",
+            module.source
+        );
+        on_disk_only += 1;
     }
     let mut paths = Vec::new();
     for module in &graph.modules {
@@ -252,7 +261,14 @@ pub fn attach(
             .then(a.edges.len().cmp(&b.edges.len()))
     });
     report.warnings.extend(graph.warnings);
-    report.warnings.push(format!("Graph source snapshots: {} matched sourcesContent; {unchecked} could not be checked. Graph topology itself is not capture-hash verified; retain the graph from the same build.", verified.len()));
+    let on_disk_note = if on_disk_only > 0 {
+        format!(
+            " {on_disk_only} matched only the file on disk because sourcesContent was transformed (for example by Babel); their import locations are unverified;"
+        )
+    } else {
+        String::new()
+    };
+    report.warnings.push(format!("Graph source snapshots: {} matched sourcesContent;{on_disk_note} {unchecked} could not be checked. Graph topology itself is not capture-hash verified; retain the graph from the same build.", verified.len()));
     if paths.is_empty() {
         report.warnings.push("No graph modules matched source-map identities; check --graph-root and the selected build.".into());
     }

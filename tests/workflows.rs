@@ -391,6 +391,21 @@ fn graph_source_hashes_reject_stale_locations_and_keep_compact_exports_compact()
     let output = run();
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("graph source snapshot differs"));
+    // Babel-style loaders replace sourcesContent; the file on disk still matches the graph.
+    fs::create_dir_all(f.0.join("src")).unwrap();
+    let on_disk = f.write("src/a.js", "OLD_SOURCE");
+    let output = run();
+    fs::remove_file(on_disk).unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert!(report["warnings"].as_array().unwrap().iter().any(|w| {
+        let w = w.as_str().unwrap();
+        w.contains("0 matched sourcesContent") && w.contains("1 matched only the file on disk")
+    }));
     let mut report = coldpath::analyze(&f.0, &[]).unwrap();
     let mut no_entry = data.clone();
     no_entry["modules"][0]["entry"] = json!(false);
