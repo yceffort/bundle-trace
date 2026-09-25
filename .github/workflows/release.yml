@@ -58,7 +58,8 @@ jobs:
           merge-multiple: true
       - run: node scripts/release-manifest.mjs "$GITHUB_REF_NAME"
       # Platform packages first: the main package's optionalDependencies must resolve when it appears.
-      - run: for tarball in dist/*.tgz; do npm publish "$tarball" --access public --provenance; done
+      # The ./ prefix keeps npm from reading dist/<name>.tgz as a GitHub user/repo shorthand.
+      - run: for tarball in ./dist/*.tgz; do npm publish "$tarball" --access public --provenance; done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm publish --access public --provenance
