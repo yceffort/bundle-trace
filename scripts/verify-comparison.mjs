@@ -103,7 +103,7 @@ try {
   await page.getByLabel('Coverage scenario').selectOption('initial.json')
   assert.deepEqual(await page.locator('#stats strong').allTextContents(), ['24 B', '6 B', '10 B', '8 B'])
   assert.match(await page.locator('#comparison').textContent(), /\+2 unobserved B/)
-  await page.locator('#actions summary').click()
+  assert(await page.locator('#actions').evaluate((details) => details.open), 'review actions are expanded by default')
   await page.locator('#action-list button').filter({hasText: 'src/later.ts'}).click()
   await page.frameLocator('#code-frame').getByLabel('Code scenario').waitFor()
   assert.equal(await page.frameLocator('#code-frame').getByLabel('Code scenario').inputValue(), 'initial.json')
