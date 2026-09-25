@@ -2727,11 +2727,11 @@
     "bundles": [
       {
         "path": "entry.js",
-        "sha256": "d8b21e18de94a75f54d030ac1830de1ad57f1b061702fb99cf58d6af5880f340",
+        "sha256": "3f9d4e8c3203c81f5bfb6b2cd3b5bed65526ba6adc3c043daf86559c9d12afed",
         "bytes": 293,
         "utf16Units": 281,
         "mapPath": "entry.js.map",
-        "mapSha256": "58149746c55fb1d811c9b830487e1784118f27371f1badb91725fcbf634852a0",
+        "mapSha256": "4bb3fdb36a7f5cca39968e29db2600ac3bbd5d88523df47106d5ed46ebefd7b8",
         "mapBytes": 892,
         "measured": true,
         "observedBytes": 177,
@@ -2752,11 +2752,11 @@
     "bundles": [
       {
         "path": "entry.js",
-        "sha256": "d8b21e18de94a75f54d030ac1830de1ad57f1b061702fb99cf58d6af5880f340",
+        "sha256": "3f9d4e8c3203c81f5bfb6b2cd3b5bed65526ba6adc3c043daf86559c9d12afed",
         "bytes": 293,
         "utf16Units": 281,
         "mapPath": "entry.js.map",
-        "mapSha256": "58149746c55fb1d811c9b830487e1784118f27371f1badb91725fcbf634852a0",
+        "mapSha256": "4bb3fdb36a7f5cca39968e29db2600ac3bbd5d88523df47106d5ed46ebefd7b8",
         "mapBytes": 892,
         "measured": true,
         "observedBytes": 208,

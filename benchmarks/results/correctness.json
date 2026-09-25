@@ -11,7 +11,7 @@
         "unmeasuredBytes": 0,
         "observedUtf16Units": 177
       },
-      "bundleTrace": {
+      "coldpath": {
         "totals": {
           "bytes": 293,
           "observedBytes": 177,
@@ -149,7 +149,7 @@
         "unmeasuredBytes": 0,
         "observedUtf16Units": 204
       },
-      "bundleTrace": {
+      "coldpath": {
         "totals": {
           "bytes": 293,
           "observedBytes": 208,
@@ -287,7 +287,7 @@
         "unmeasuredBytes": 0,
         "observedUtf16Units": 278325
       },
-      "bundleTrace": {
+      "coldpath": {
         "totals": {
           "bytes": 672025,
           "observedBytes": 278485,
@@ -473,7 +473,7 @@
         "unmeasuredBytes": 6574051,
         "observedUtf16Units": 278325
       },
-      "bundleTrace": {
+      "coldpath": {
         "totals": {
           "bytes": 7246076,
           "observedBytes": 278485,
@@ -1024,7 +1024,7 @@
         "unmeasuredBytes": 0,
         "observedUtf16Units": 66
       },
-      "bundleTrace": {
+      "coldpath": {
         "totals": {
           "bytes": 97,
           "observedBytes": 66,
@@ -1162,7 +1162,7 @@
         "unmeasuredBytes": 0,
         "observedUtf16Units": 61
       },
-      "bundleTrace": {
+      "coldpath": {
         "totals": {
           "bytes": 92,
           "observedBytes": 61,
@@ -1300,7 +1300,7 @@
         "unmeasuredBytes": 0,
         "observedUtf16Units": 67
       },
-      "bundleTrace": {
+      "coldpath": {
         "totals": {
           "bytes": 98,
           "observedBytes": 67,

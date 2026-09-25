@@ -1,7 +1,7 @@
 [
   {
-    "tool": "bundle-trace",
-    "title": "bundle-trace \u00b7 Coverage report",
+    "tool": "coldpath",
+    "title": "coldpath \u00b7 Coverage report",
     "errors": [],
     "requests": []
   },
@@ -13,7 +13,7 @@
   },
   {
     "tool": "monocart",
-    "title": "bundle-trace comparison",
+    "title": "coldpath comparison",
     "errors": [],
     "requests": []
   }

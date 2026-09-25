@@ -1,3 +1,3 @@
 export function startup() {
-  return 'BT_CORPUS_STARTUP_한🔥';
+  return 'CP_CORPUS_STARTUP_한🔥';
 }

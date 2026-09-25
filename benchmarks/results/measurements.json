@@ -5,10 +5,10 @@
   "cpu": "Apple M5",
   "node": "v24.20.0",
   "rust": "rustc 1.95.0 (59807616e 2026-04-14)",
-  "bundleTraceCommit": "537b08500d0a0df2f543ebb63460da4ff441d15f",
-  "bundleTraceBinarySha256": "445b8a9a179b2193199c5c09610fcb720e3e2c1535bfad3e3b1dfc7692c939a0",
+  "coldpathCommit": "537b08500d0a0df2f543ebb63460da4ff441d15f",
+  "coldpathBinarySha256": "445b8a9a179b2193199c5c09610fcb720e3e2c1535bfad3e3b1dfc7692c939a0",
   "tools": {
-    "bundle-trace": "0.1.0",
+    "coldpath": "0.1.0",
     "source-map-explorer": "2.5.3",
     "monocart-coverage-reports": "2.13.0"
   },
@@ -19,7 +19,7 @@
   "summary": [
     {
       "dataset": "blog-measured",
-      "tool": "bundle-trace",
+      "tool": "coldpath",
       "mode": "json",
       "samples": 9,
       "elapsedMs": {
@@ -82,7 +82,7 @@
     },
     {
       "dataset": "blog-measured",
-      "tool": "bundle-trace",
+      "tool": "coldpath",
       "mode": "html",
       "samples": 9,
       "elapsedMs": {
@@ -145,7 +145,7 @@
     },
     {
       "dataset": "blog-mapped",
-      "tool": "bundle-trace",
+      "tool": "coldpath",
       "mode": "static",
       "samples": 9,
       "elapsedMs": {

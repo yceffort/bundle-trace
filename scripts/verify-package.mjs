@@ -53,7 +53,7 @@ const server = createServer(async (request, response) => {
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 try {
   await writeFile(join(project, 'interact.mjs'), `export default async function ({page}) {
-  if (await page.evaluate(() => globalThis.__bundleTrace.run(true)) !== '한🔥') throw new Error('Interaction did not run')
+  if (await page.evaluate(() => globalThis.__coldpathApp.run(true)) !== '한🔥') throw new Error('Interaction did not run')
 }\n`)
   await writeFile(join(project, 'coldpath.scenarios.json'), JSON.stringify({
     url: `http://127.0.0.1:${server.address().port}/`, dir: 'dist/assets', prefix: '/assets/', waitMs: 0, out: 'artifacts/coverage',

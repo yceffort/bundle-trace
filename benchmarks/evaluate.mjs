@@ -53,7 +53,7 @@ for (const name of datasets) {
     dataset: name,
     bundles: manifest.bundles.length,
     oracle: manifest.totals,
-    bundleTrace: {
+    coldpath: {
       totals: rust.totals,
       warnings: rust.warnings.length,
       oracleMatch: true,

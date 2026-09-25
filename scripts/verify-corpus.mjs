@@ -90,8 +90,8 @@ const canonicalSource = (source, mapFile, dir) => {
   if (/^[a-z][a-z0-9+.-]*:/i.test(source)) return source.replaceAll('/./', '/')
   return relative(dir, resolve(dirname(mapFile), source)).replaceAll('\\', '/')
 }
-const markers = new Map([['BT_CORPUS_STARTUP_', 'startup.js'], ['BT_CORPUS_CHART_', 'chart.js'],
-  ['BT_CORPUS_NEVER_', 'chart.js'], ['BT_CORPUS_SEARCH_', 'search.js']])
+const markers = new Map([['CP_CORPUS_STARTUP_', 'startup.js'], ['CP_CORPUS_CHART_', 'chart.js'],
+  ['CP_CORPUS_NEVER_', 'chart.js'], ['CP_CORPUS_SEARCH_', 'search.js']])
 
 async function checkAttribution(report, dir) {
   let oracleBytes = 0, disagreement = 0, probeBytes = 0, probeWrong = 0, duplicateMappingBytes = 0, defaultOracleDisagreementBytes = 0
@@ -195,12 +195,12 @@ try {
       const captures = []
       for (const scenario of ['initial', 'open-report', 'search']) {
         if (scenario === 'open-report') {
-          if (next) { await page.locator('#report').click(); await page.locator('#result').filter({hasText: 'BT_CORPUS_CHART_'}).waitFor() }
-          else assert.match(await page.evaluate(() => globalThis.corpus.openReport()), /BT_CORPUS_CHART_/)
+          if (next) { await page.locator('#report').click(); await page.locator('#result').filter({hasText: 'CP_CORPUS_CHART_'}).waitFor() }
+          else assert.match(await page.evaluate(() => globalThis.corpus.openReport()), /CP_CORPUS_CHART_/)
         }
         if (scenario === 'search') {
-          if (next) { await page.locator('#search').click(); await page.locator('#result').filter({hasText: 'BT_CORPUS_SEARCH_'}).waitFor() }
-          else assert.match(await page.evaluate(() => globalThis.corpus.search()), /BT_CORPUS_SEARCH_/)
+          if (next) { await page.locator('#search').click(); await page.locator('#result').filter({hasText: 'CP_CORPUS_SEARCH_'}).waitFor() }
+          else assert.match(await page.evaluate(() => globalThis.corpus.search()), /CP_CORPUS_SEARCH_/)
         }
         const {result} = await cdp.send('Profiler.takePreciseCoverage')
         const scripts = []

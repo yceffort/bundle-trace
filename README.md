@@ -335,6 +335,6 @@ The current Next.js fixture exposes **22 incorrectly attributed probe bytes out 
 
 ## Origin and license
 
-Extracted from the [`bundle-trace` experiment in yceffort/blog](https://github.com/yceffort/blog/tree/7f33d3bccd6ebc71d7c26c07a2527ced07846c3b/experiments/bundle-trace). The original repository keeps the blog-specific performance studies and measurement data; this repository maintains the reusable analyzer and collector.
+Extracted from an experiment in [yceffort/blog](https://github.com/yceffort/blog). The original repository keeps the blog-specific performance studies and measurement data; this repository maintains the reusable analyzer and collector.
 
 [MIT](LICENSE) © 2026 yceffort.

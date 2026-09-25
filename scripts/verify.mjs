@@ -62,7 +62,7 @@ try {
   for (const scenario of ['initial', 'interaction-delta']) {
     if (scenario === 'interaction-delta') {
       assert.equal(
-        await page.evaluate(() => globalThis.__bundleTrace.run(true)),
+        await page.evaluate(() => globalThis.__coldpathApp.run(true)),
         '한🔥',
       )
     }

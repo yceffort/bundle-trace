@@ -44,7 +44,7 @@ try {
   await writeFile(
     actions,
     `export default async function ({page}) {
-    const result = await page.evaluate(() => globalThis.__bundleTrace.run(true))
+    const result = await page.evaluate(() => globalThis.__coldpathApp.run(true))
     if (result !== '한🔥') throw new Error('Interaction did not run')
   }\n`,
   )
