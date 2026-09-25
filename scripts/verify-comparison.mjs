@@ -20,10 +20,29 @@ const report = join(output, 'pr.json')
 const html = join(output, 'pr.html')
 const meta = join(output, 'graph.json')
 const write = (path, data) => writeFile(path, JSON.stringify(data))
-const map = (sources) => ({version: 3, sources, sourcesContent: sources.map((s) => '// original ' + s), names: [], mappings: sources.map((_, i) => i ? 'ICAA' : 'AAAA').join(',')})
+const map = (sources) => ({
+  version: 3,
+  sources,
+  sourcesContent: sources.map((s) => '// original ' + s),
+  names: [],
+  mappings: sources.map((_, i) => (i ? 'ICAA' : 'AAAA')).join(','),
+})
 const record = (url, text, ranges) => ({url, text, ranges: ranges.map(([start, end]) => ({start, end}))})
-const args = ['--dir', input, '--coverage', search, '--coverage', initial, '--coverage', interaction,
-  '--initial-scenario', 'initial.json', '--scenario-order', 'initial.json,interaction.json,search.json', '--source-compression']
+const args = [
+  '--dir',
+  input,
+  '--coverage',
+  search,
+  '--coverage',
+  initial,
+  '--coverage',
+  interaction,
+  '--initial-scenario',
+  'initial.json',
+  '--scenario-order',
+  'initial.json,interaction.json,search.json',
+  '--source-compression',
+]
 
 await writeFile(join(input, 'app.js'), 'abcdefghijkl')
 await write(join(input, 'app.js.map'), map(['src/initial.ts', 'src/removed.ts', 'src/later.ts']))
@@ -37,15 +56,34 @@ await write(join(input, 'app.js.map'), map(['src/initial.ts', 'src/later.ts', 's
 await writeFile(join(input, 'lazy.js'), 'lazy')
 await write(join(input, 'lazy.js.map'), map(['src/lazy.ts']))
 await writeFile(join(input, 'absent.js'), 'none')
-await write(initial, [record('app.js', 'abcdefghijklmnop', [[0, 4], [12, 14]])])
-await write(interaction, [record('app.js', 'abcdefghijklmnop', [[4, 8], [13, 15]]), record('lazy.js', 'lazy', [[0, 4]])])
+await write(initial, [
+  record('app.js', 'abcdefghijklmnop', [
+    [0, 4],
+    [12, 14],
+  ]),
+])
+await write(interaction, [
+  record('app.js', 'abcdefghijklmnop', [
+    [4, 8],
+    [13, 15],
+  ]),
+  record('lazy.js', 'lazy', [[0, 4]]),
+])
 await write(search, [record('app.js', 'abcdefghijklmnop', [[14, 16]])])
 await write(meta, {
-  schemaVersion: 1, bundler: 'webpack',
-  modules: [{id: 'dashboard', source: 'src/dashboard.ts', entry: true}, {id: 'later', source: 'src/later.ts'}],
+  schemaVersion: 1,
+  bundler: 'webpack',
+  modules: [
+    {id: 'dashboard', source: 'src/dashboard.ts', entry: true},
+    {id: 'later', source: 'src/later.ts'},
+  ],
   edges: [{from: 'dashboard', to: 'later', kind: 'static', location: {line: 12, column: 1}, locationEvidence: 'webpack-stats'}],
 })
-execFileSync(binary, [...args, '--baseline', baseline, '--graph', meta, '--graph-root', input, '--details', '--json', report, '--treemap', html], {stdio: 'pipe'})
+execFileSync(
+  binary,
+  [...args, '--baseline', baseline, '--graph', meta, '--graph-root', input, '--details', '--json', report, '--treemap', html],
+  {stdio: 'pipe'},
+)
 const data = JSON.parse(await readFile(report, 'utf8'))
 assert.equal(data.baseline.totals.delta.bytes, 12)
 assert.equal(data.scenarioReports[1].interactionCandidates.find((s) => s.source === 'src/mixed.ts').interactionOnlyBytes, 1)
@@ -54,9 +92,12 @@ assert.equal(data.scenarioReports[1].interactionCandidates.find((s) => s.source 
 const browser = await chromium.launch({headless: true})
 try {
   const page = await browser.newPage({viewport: {width: 1440, height: 1100}})
-  const errors = [], requests = []
+  const errors = [],
+    requests = []
   page.on('pageerror', (error) => errors.push(error.message))
-  page.on('request', (request) => { if (/^https?:/.test(request.url())) requests.push(request.url()) })
+  page.on('request', (request) => {
+    if (/^https?:/.test(request.url())) requests.push(request.url())
+  })
   await page.goto(pathToFileURL(html).href)
   assert.match(await page.locator('#headline').textContent(), /loaded 20 B of JavaScript\. 4 B \(20%\) of it never ran/)
   assert.match(await page.locator('#later-list').innerText(), /later\.ts\s+4 B\s+Runs only in "interaction\.json": src\/later\.ts/)
@@ -82,12 +123,12 @@ try {
   await inspector.locator('#source-title').filter({hasText: 'later.ts'}).waitFor()
   await inspector.locator('#view-generated').click()
   assert.match(await inspector.locator('#generated').textContent(), /efgh/)
-  assert(await inspector.locator('#generated mark.observed:not(.dim)').count() > 0)
+  assert((await inspector.locator('#generated mark.observed:not(.dim)').count()) > 0)
   await inspector.getByLabel('Code scenario').selectOption('initial.json')
   assert.equal(await inspector.locator('#generated mark.observed:not(.dim)').count(), 0)
-  assert(await inspector.locator('#generated mark.unobserved:not(.dim)').count() > 0)
+  assert((await inspector.locator('#generated mark.unobserved:not(.dim)').count()) > 0)
   await inspector.getByLabel('Code scenario').selectOption('interaction.json')
-  assert(await inspector.locator('#generated mark.observed:not(.dim)').count() > 0)
+  assert((await inspector.locator('#generated mark.observed:not(.dim)').count()) > 0)
   assert.equal(await inspector.locator('#generated mark.unobserved:not(.dim)').count(), 0)
   await page.screenshot({path: join(output, 'inspector.png'), fullPage: true})
   assert(await inspector.locator('#generated-view').isVisible())
@@ -121,7 +162,9 @@ try {
   await page.screenshot({path: join(output, 'dark.png'), fullPage: true})
   assert.deepEqual(errors, [])
   assert.deepEqual(requests, [])
-  console.log('Verified three ordered phases, missing initial evidence, baseline changes, import locations, compressed estimates, review actions, per-scenario inspector, mobile layout and offline operation.')
+  console.log(
+    'Verified three ordered phases, missing initial evidence, baseline changes, import locations, compressed estimates, review actions, per-scenario inspector, mobile layout and offline operation.',
+  )
 } finally {
   await browser.close()
 }

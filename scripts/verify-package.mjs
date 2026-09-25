@@ -16,28 +16,60 @@ await mkdir(join(project, 'src'), {recursive: true})
 const exec = (command, args, cwd = project) => execFileSync(command, args, {cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit']})
 
 execFileSync('cargo', ['build', '--locked'], {cwd: root, stdio: 'inherit'})
-const native = exec(process.execPath, [join(root, 'scripts/pack-native.mjs'), '--binary', join(root, 'target/debug/coldpath'), '--out', work], root).trim()
+const native = exec(
+  process.execPath,
+  [join(root, 'scripts/pack-native.mjs'), '--binary', join(root, 'target/debug/coldpath'), '--out', work],
+  root,
+).trim()
 const main = join(work, exec('npm', ['pack', '--silent', '--pack-destination', work], root).trim().split('\n').at(-1))
 const devDependencies = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).devDependencies
 
 for (const file of ['entry.js', 'startup.js', 'feature.js']) await copyFile(join(root, 'fixtures', file), join(project, 'src', file))
-await writeFile(join(project, 'package.json'), JSON.stringify({name: 'coldpath-fresh-project', private: true, type: 'module',
-  devDependencies: {coldpath: `file:${main}`, [`coldpath-${process.platform}-${process.arch}`]: `file:${native}`,
-    esbuild: devDependencies.esbuild, rollup: devDependencies.rollup, playwright: devDependencies['@playwright/test']}}))
+await writeFile(
+  join(project, 'package.json'),
+  JSON.stringify({
+    name: 'coldpath-fresh-project',
+    private: true,
+    type: 'module',
+    devDependencies: {
+      coldpath: `file:${main}`,
+      [`coldpath-${process.platform}-${process.arch}`]: `file:${native}`,
+      esbuild: devDependencies.esbuild,
+      rollup: devDependencies.rollup,
+      playwright: devDependencies['@playwright/test'],
+    },
+  }),
+)
 exec('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'])
 
-await writeFile(join(project, 'build.mjs'), `import {rollup} from 'rollup'
+await writeFile(
+  join(project, 'build.mjs'),
+  `import {rollup} from 'rollup'
 import {build} from 'esbuild'
 import coldpathGraph from 'coldpath/rollup'
 const bundle = await rollup({input: 'src/entry.js', plugins: [coldpathGraph()]})
 await bundle.write({dir: 'dist/assets', format: 'esm', sourcemap: true})
 await build({entryPoints: ['src/entry.js'], bundle: true, format: 'esm', outdir: 'esbuild', metafile: true, write: false})
   .then(({metafile}) => import('node:fs').then((fs) => fs.writeFileSync('meta.json', JSON.stringify(metafile))))
-`)
+`,
+)
 exec(process.execPath, ['build.mjs'])
-await writeFile(join(project, 'dist/index.html'), '<!doctype html><meta charset="utf-8"><script type="module" src="/assets/entry.js"></script>')
+await writeFile(
+  join(project, 'dist/index.html'),
+  '<!doctype html><meta charset="utf-8"><script type="module" src="/assets/entry.js"></script>',
+)
 const coldpath = join(project, 'node_modules/.bin/coldpath')
-const graphLog = exec(coldpath, ['graph', '--format', 'esbuild', '--input', 'meta.json', '--root', '.', '--out', 'artifacts/esbuild.graph.json'])
+const graphLog = exec(coldpath, [
+  'graph',
+  '--format',
+  'esbuild',
+  '--input',
+  'meta.json',
+  '--root',
+  '.',
+  '--out',
+  'artifacts/esbuild.graph.json',
+])
 assert.match(graphLog, /Exported esbuild: 3 modules/)
 
 const server = createServer(async (request, response) => {
@@ -52,19 +84,37 @@ const server = createServer(async (request, response) => {
 })
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 try {
-  await writeFile(join(project, 'interact.mjs'), `export default async function ({page}) {
+  await writeFile(
+    join(project, 'interact.mjs'),
+    `export default async function ({page}) {
   if (await page.evaluate(() => globalThis.__coldpathApp.run(true)) !== '한🔥') throw new Error('Interaction did not run')
-}\n`)
-  await writeFile(join(project, 'coldpath.scenarios.json'), JSON.stringify({
-    url: `http://127.0.0.1:${server.address().port}/`, dir: 'dist/assets', prefix: '/assets/', waitMs: 0, out: 'artifacts/coverage',
-    scenarios: [{name: 'initial'}, {name: 'interaction', actions: 'interact.mjs'}],
-  }))
+}\n`,
+  )
+  await writeFile(
+    join(project, 'coldpath.scenarios.json'),
+    JSON.stringify({
+      url: `http://127.0.0.1:${server.address().port}/`,
+      dir: 'dist/assets',
+      prefix: '/assets/',
+      waitMs: 0,
+      out: 'artifacts/coverage',
+      scenarios: [{name: 'initial'}, {name: 'interaction', actions: 'interact.mjs'}],
+    }),
+  )
   // The server runs in this process, so collection must not block the event loop.
   await promisify(execFile)(coldpath, ['collect', '--scenarios', 'coldpath.scenarios.json'], {cwd: project})
 } finally {
   await new Promise((resolve) => server.close(resolve))
 }
-exec(coldpath, ['analyze', '--scenarios', 'coldpath.scenarios.json', '--graph', 'dist/assets/coldpath.graph.json', '--json', 'artifacts/report.json'])
+exec(coldpath, [
+  'analyze',
+  '--scenarios',
+  'coldpath.scenarios.json',
+  '--graph',
+  'dist/assets/coldpath.graph.json',
+  '--json',
+  'artifacts/report.json',
+])
 const report = JSON.parse(await readFile(join(project, 'artifacts/report.json'), 'utf8'))
 assert.deepEqual(report.scenarios, ['initial', 'interaction'])
 assert.equal(report.initialScenario, 'initial')

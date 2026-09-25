@@ -39,9 +39,7 @@ const server = createServer((request, response) => {
     response.end(source)
   } else {
     response.setHeader('Content-Type', 'text/html; charset=utf-8')
-    response.end(
-      '<!doctype html><meta charset="utf-8"><script src="/entry.js"></script>',
-    )
+    response.end('<!doctype html><meta charset="utf-8"><script src="/entry.js"></script>')
   }
 })
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -61,10 +59,7 @@ try {
   assert.equal(await page.evaluate(() => globalThis.__startupCount), 1)
   for (const scenario of ['initial', 'interaction-delta']) {
     if (scenario === 'interaction-delta') {
-      assert.equal(
-        await page.evaluate(() => globalThis.__coldpathApp.run(true)),
-        '한🔥',
-      )
+      assert.equal(await page.evaluate(() => globalThis.__coldpathApp.run(true)), '한🔥')
     }
     const {result} = await cdp.send('Profiler.takePreciseCoverage')
     const script = result.find((script) => script.url === `${url}/entry.js`)
@@ -89,28 +84,19 @@ try {
 }
 // takePreciseCoverage resets counters; later snapshots can omit unchanged
 // functions entirely. Test the delta separately as well as its union with load.
-const deltaRanges = observations[1].scripts[0].functions.flatMap(
-  (fn) => fn.ranges,
-)
+const deltaRanges = observations[1].scripts[0].functions.flatMap((fn) => fn.ranges)
 assert(
   deltaRanges.some((range) => range.count > 0),
   'interaction did not execute fixture code',
 )
-assert(
-  source.includes('한🔥'),
-  'fixture must contain actual multi-byte characters',
-)
+assert(source.includes('한🔥'), 'fixture must contain actual multi-byte characters')
 const coveragePaths = []
 for (const observation of observations) {
   const path = join(artifacts, `fixture-${observation.scenario}.coverage.json`)
   await writeFile(path, JSON.stringify(observation, null, 2) + '\n')
   coveragePaths.push(path)
 }
-execFileSync(
-  'cargo',
-  ['build', '--locked', '--manifest-path', join(root, 'Cargo.toml')],
-  {stdio: 'inherit'},
-)
+execFileSync('cargo', ['build', '--locked', '--manifest-path', join(root, 'Cargo.toml')], {stdio: 'inherit'})
 const binary = join(root, 'target/debug/coldpath')
 let checked = 0
 for (const [name, inputs] of [
@@ -122,15 +108,7 @@ for (const [name, inputs] of [
   const path = join(artifacts, `fixture-${name}.json`)
   execFileSync(
     binary,
-    [
-      '--dir',
-      output,
-      '--metafile',
-      metaPath,
-      '--json',
-      path,
-      ...inputs.flatMap((index) => ['--coverage', coveragePaths[index]]),
-    ],
+    ['--dir', output, '--metafile', metaPath, '--json', path, ...inputs.flatMap((index) => ['--coverage', coveragePaths[index]])],
     {stdio: 'pipe'},
   )
   const report = JSON.parse(await readFile(path, 'utf8'))
@@ -141,10 +119,10 @@ for (const [name, inputs] of [
     binary,
   )
   assert.equal(report.warnings.length, 0)
-  assert.deepEqual(
-    report.importPaths.find((row) => row.source === 'fixtures/feature.js').path,
-    ['fixtures/entry.js', 'fixtures/feature.js'],
-  )
+  assert.deepEqual(report.importPaths.find((row) => row.source === 'fixtures/feature.js').path, [
+    'fixtures/entry.js',
+    'fixtures/feature.js',
+  ])
 }
 // A real content change must fail even if URL and length are unchanged.
 const stale = structuredClone(observations[0])
@@ -158,6 +136,4 @@ assert.throws(
     }),
   /SHA-256 mismatch/,
 )
-console.log(
-  `Verified ${checked} native V8 reports, static attribution, import path, Unicode and stale-build rejection.`,
-)
+console.log(`Verified ${checked} native V8 reports, static attribution, import path, Unicode and stale-build rejection.`)

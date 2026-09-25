@@ -33,20 +33,37 @@ async function main() {
     return 0
   }
   if (command === 'collect') {
-    const {values} = parseArgs({args: rest, options: {
-      scenarios: {type: 'string'}, url: {type: 'string'}, dir: {type: 'string'}, out: {type: 'string'},
-      prefix: {type: 'string'}, scenario: {type: 'string'}, actions: {type: 'string'}, 'wait-ms': {type: 'string'},
-      'cdn-prefix': {type: 'string', multiple: true}, device: {type: 'string'}, viewport: {type: 'string'}, 'user-agent': {type: 'string'},
-      'device-scale-factor': {type: 'string'}, mobile: {type: 'boolean'}, touch: {type: 'boolean'},
-      'latency-ms': {type: 'string'}, 'download-kbps': {type: 'string'}, 'upload-kbps': {type: 'string'},
-      'cpu-slowdown': {type: 'string'}, 'storage-state': {type: 'string'},
-    }})
+    const {values} = parseArgs({
+      args: rest,
+      options: {
+        scenarios: {type: 'string'},
+        url: {type: 'string'},
+        dir: {type: 'string'},
+        out: {type: 'string'},
+        prefix: {type: 'string'},
+        scenario: {type: 'string'},
+        actions: {type: 'string'},
+        'wait-ms': {type: 'string'},
+        'cdn-prefix': {type: 'string', multiple: true},
+        device: {type: 'string'},
+        viewport: {type: 'string'},
+        'user-agent': {type: 'string'},
+        'device-scale-factor': {type: 'string'},
+        mobile: {type: 'boolean'},
+        touch: {type: 'boolean'},
+        'latency-ms': {type: 'string'},
+        'download-kbps': {type: 'string'},
+        'upload-kbps': {type: 'string'},
+        'cpu-slowdown': {type: 'string'},
+        'storage-state': {type: 'string'},
+      },
+    })
     if (values.scenarios) {
       const {scenarios} = await loadScenarios(values.scenarios)
       for (const scenario of scenarios) await collect(scenario)
       return 0
     }
-    const number = (key) => values[key] === undefined ? undefined : Number(values[key])
+    const number = (key) => (values[key] === undefined ? undefined : Number(values[key]))
     let viewport
     if (values.viewport) {
       const match = /^(\d+)x(\d+)$/.exec(values.viewport)
@@ -55,42 +72,84 @@ async function main() {
     }
     const throttled = ['latency-ms', 'download-kbps', 'upload-kbps'].some((key) => values[key] !== undefined)
     await collect({
-      url: values.url, dir: values.dir, out: values.out, prefix: values.prefix, scenario: values.scenario,
-      actions: values.actions, waitMs: number('wait-ms'), cdnPrefixes: values['cdn-prefix'], device: values.device, viewport,
-      userAgent: values['user-agent'], deviceScaleFactor: number('device-scale-factor'),
-      isMobile: values.mobile, hasTouch: values.touch, cpuSlowdown: number('cpu-slowdown'),
-      network: throttled ? {latencyMs: number('latency-ms'), downloadKbps: number('download-kbps'), uploadKbps: number('upload-kbps')} : undefined,
+      url: values.url,
+      dir: values.dir,
+      out: values.out,
+      prefix: values.prefix,
+      scenario: values.scenario,
+      actions: values.actions,
+      waitMs: number('wait-ms'),
+      cdnPrefixes: values['cdn-prefix'],
+      device: values.device,
+      viewport,
+      userAgent: values['user-agent'],
+      deviceScaleFactor: number('device-scale-factor'),
+      isMobile: values.mobile,
+      hasTouch: values.touch,
+      cpuSlowdown: number('cpu-slowdown'),
+      network: throttled
+        ? {latencyMs: number('latency-ms'), downloadKbps: number('download-kbps'), uploadKbps: number('upload-kbps')}
+        : undefined,
       storageState: values['storage-state'],
     })
     return 0
   }
   if (command === 'graph') {
-    const {values} = parseArgs({args: rest, options: {
-      format: {type: 'string'}, input: {type: 'string'}, root: {type: 'string'},
-      out: {type: 'string'}, environment: {type: 'string'},
-    }})
+    const {values} = parseArgs({
+      args: rest,
+      options: {
+        format: {type: 'string'},
+        input: {type: 'string'},
+        root: {type: 'string'},
+        out: {type: 'string'},
+        environment: {type: 'string'},
+      },
+    })
     await exportGraph(values)
     return 0
   }
   if (command === 'snapshot') {
-    const {values} = parseArgs({args: rest, options: {
-      url: {type: 'string'}, out: {type: 'string'}, 'wait-ms': {type: 'string'}, actions: {type: 'string'}, scenario: {type: 'string'},
-    }})
+    const {values} = parseArgs({
+      args: rest,
+      options: {
+        url: {type: 'string'},
+        out: {type: 'string'},
+        'wait-ms': {type: 'string'},
+        actions: {type: 'string'},
+        scenario: {type: 'string'},
+      },
+    })
     await snapshot({...values, waitMs: values['wait-ms'] === undefined ? undefined : Number(values['wait-ms'])})
     return 0
   }
   if (command === 'modules') {
-    const {values} = parseArgs({args: rest, options: {
-      dir: {type: 'string'}, out: {type: 'string'}, 'maps-json': {type: 'string', multiple: true}, chunks: {type: 'boolean'}, graph: {type: 'string'},
-    }})
+    const {values} = parseArgs({
+      args: rest,
+      options: {
+        dir: {type: 'string'},
+        out: {type: 'string'},
+        'maps-json': {type: 'string', multiple: true},
+        chunks: {type: 'boolean'},
+        graph: {type: 'string'},
+      },
+    })
     await inferModules({...values, mapsJson: values['maps-json']})
     return 0
   }
   if (command === 'label') {
-    const {values} = parseArgs({args: rest, options: {
-      report: {type: 'string'}, out: {type: 'string'}, mode: {type: 'string'}, provider: {type: 'string'},
-      model: {type: 'string'}, 'base-url': {type: 'string'}, top: {type: 'string'}, lang: {type: 'string'},
-    }})
+    const {values} = parseArgs({
+      args: rest,
+      options: {
+        report: {type: 'string'},
+        out: {type: 'string'},
+        mode: {type: 'string'},
+        provider: {type: 'string'},
+        model: {type: 'string'},
+        'base-url': {type: 'string'},
+        top: {type: 'string'},
+        lang: {type: 'string'},
+      },
+    })
     await label({...values, baseUrl: values['base-url']})
     return 0
   }
@@ -110,7 +169,8 @@ async function main() {
   return runAnalyzer([
     ...(args.includes('--dir') ? [] : ['--dir', dir]),
     ...scenarios.flatMap((s) => ['--coverage', s.out]),
-    '--scenario-order', names.join(','),
+    '--scenario-order',
+    names.join(','),
     ...(args.includes('--initial-scenario') ? [] : ['--initial-scenario', names[0]]),
     ...args,
   ])

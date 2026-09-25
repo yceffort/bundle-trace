@@ -64,23 +64,14 @@ try {
     assert.equal(capture.scripts[0].path, 'entry.js')
     const analyze = async (inputs, name) => {
       const report = join(artifacts, `${name}.json`)
-      await run(binary, [
-        '--dir',
-        fixture,
-        ...inputs.flatMap((input) => ['--coverage', input]),
-        '--json',
-        report,
-      ])
+      await run(binary, ['--dir', fixture, ...inputs.flatMap((input) => ['--coverage', input]), '--json', report])
       return JSON.parse(await readFile(report, 'utf8'))
     }
     const actual = await analyze([output], scenario)
     // The recorded interaction is a counter-reset delta; a fresh capture
     // includes initial load, so compare it with the union of both recordings.
     const expected = await analyze(
-      [
-        join(fixture, 'initial.coverage.json'),
-        ...(scenario === 'interaction' ? [join(fixture, 'interaction.coverage.json')] : []),
-      ],
+      [join(fixture, 'initial.coverage.json'), ...(scenario === 'interaction' ? [join(fixture, 'interaction.coverage.json')] : [])],
       `${scenario}-expected`,
     )
     assert.deepEqual(actual.totals, expected.totals)
@@ -89,23 +80,12 @@ try {
   }
   // The browser and disk must match even when the URL still looks correct.
   servedSource = source + '\n'
+  await assert.rejects(run(process.execPath, [...args, '--out', join(artifacts, 'stale.coverage.json')]), /browser\/disk source mismatch/)
   await assert.rejects(
-    run(process.execPath, [...args, '--out', join(artifacts, 'stale.coverage.json')]),
-    /browser\/disk source mismatch/,
-  )
-  await assert.rejects(
-    run(process.execPath, [
-      ...args,
-      '--prefix',
-      '/assets',
-      '--out',
-      join(artifacts, 'invalid.coverage.json'),
-    ]),
+    run(process.execPath, [...args, '--prefix', '/assets', '--out', join(artifacts, 'invalid.coverage.json')]),
     /--prefix must be/,
   )
 } finally {
   await new Promise((resolve) => server.close(resolve))
 }
-console.log(
-  'Verified standalone collector, custom actions, source/map evidence, and stale-source rejection.',
-)
+console.log('Verified standalone collector, custom actions, source/map evidence, and stale-source rejection.')

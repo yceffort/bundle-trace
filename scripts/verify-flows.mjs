@@ -37,20 +37,41 @@ const cdn = await listen(async (request, response) => {
 })
 const cdnPrefix = `http://127.0.0.1:${cdn.address().port}/static/`
 const app = await listen(async (request, response) => {
-  if (request.url === '/') html(response, `<script src="${cdnPrefix}cdn.js"></script><script src="/assets/first.js"></script><a href="/second">next</a>`)
+  if (request.url === '/')
+    html(response, `<script src="${cdnPrefix}cdn.js"></script><script src="/assets/first.js"></script><a href="/second">next</a>`)
   else if (request.url === '/second') html(response, '<script src="/assets/second.js"></script>')
   else if (request.url.startsWith('/assets/')) script(response, await readFile(join(fixture, request.url.slice(8))))
   else response.writeHead(404).end()
 })
 const actions = join(artifacts, 'flow.mjs')
-await writeFile(actions, `export default async function ({page}) {
+await writeFile(
+  actions,
+  `export default async function ({page}) {
   await page.getByRole('link', {name: 'next'}).click()
   await page.waitForURL('**/second')
   await page.waitForFunction(() => globalThis.__worker === 42)
-}\n`)
-const collect = (name, extra) => run(process.execPath, [join(root, 'bin', 'coldpath.mjs'), 'collect',
-  '--url', `http://127.0.0.1:${app.address().port}/`, '--dir', fixture, '--prefix', '/assets/', '--wait-ms', '0',
-  '--scenario', name, '--actions', actions, '--out', join(artifacts, `${name}.coverage.json`), ...extra])
+}\n`,
+)
+const collect = (name, extra) =>
+  run(process.execPath, [
+    join(root, 'bin', 'coldpath.mjs'),
+    'collect',
+    '--url',
+    `http://127.0.0.1:${app.address().port}/`,
+    '--dir',
+    fixture,
+    '--prefix',
+    '/assets/',
+    '--wait-ms',
+    '0',
+    '--scenario',
+    name,
+    '--actions',
+    actions,
+    '--out',
+    join(artifacts, `${name}.coverage.json`),
+    ...extra,
+  ])
 
 try {
   await collect('flow', ['--cdn-prefix', cdnPrefix])
@@ -85,4 +106,6 @@ try {
 } finally {
   await Promise.all([app, cdn].map((server) => new Promise((resolve) => server.close(resolve))))
 }
-console.log('Verified CDN prefix mapping, pre-navigation snapshots, unmeasured worker code, blocked unlisted origins and stale CDN rejection.')
+console.log(
+  'Verified CDN prefix mapping, pre-navigation snapshots, unmeasured worker code, blocked unlisted origins and stale CDN rejection.',
+)

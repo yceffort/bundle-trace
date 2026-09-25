@@ -34,26 +34,11 @@ await writeFile(
   }),
 )
 const coverage = join(output, 'coverage.json')
-await writeFile(
-  coverage,
-  JSON.stringify([
-    {url: 'https://fixture.invalid/app.js', text: source, ranges: [{start: 0, end: 40}]},
-  ]),
-)
+await writeFile(coverage, JSON.stringify([{url: 'https://fixture.invalid/app.js', text: source, ranges: [{start: 0, end: 40}]}]))
 const html = join(output, 'index.html')
 execFileSync(
   binary,
-  [
-    join(input, '*.js'),
-    '--dir',
-    input,
-    '--coverage',
-    coverage,
-    '--url-prefix',
-    'https://fixture.invalid/',
-    '--treemap',
-    html,
-  ],
+  [join(input, '*.js'), '--dir', input, '--coverage', coverage, '--url-prefix', 'https://fixture.invalid/', '--treemap', html],
   {stdio: 'pipe'},
 )
 const browser = await chromium.launch({headless: true})
@@ -75,18 +60,8 @@ try {
   assert(await page.getByLabel('Show files not loaded in any recording').isChecked())
   assert.equal(await page.locator('#rows tr').count(), 2)
   assert.equal(await page.locator('.tile').count(), 2)
-  assert.equal(
-    await page
-      .locator('.tile')
-      .evaluateAll((tiles) => tiles.reduce((sum, tile) => sum + Number(tile.dataset.bytes), 0)),
-    90,
-  )
-  assert.deepEqual(await page.locator('#stats strong').allTextContents(), [
-    '90 B',
-    '40 B',
-    '40 B',
-    '10 B',
-  ])
+  assert.equal(await page.locator('.tile').evaluateAll((tiles) => tiles.reduce((sum, tile) => sum + Number(tile.dataset.bytes), 0)), 90)
+  assert.deepEqual(await page.locator('#stats strong').allTextContents(), ['90 B', '40 B', '40 B', '10 B'])
   await page.getByRole('button', {name: 'app.js', exact: true}).click()
   await page.getByRole('button', {name: 'src', exact: true}).click()
   await page.getByRole('button', {name: 'components', exact: true}).click()
@@ -113,12 +88,7 @@ try {
   await page.getByLabel('Mapped only', {exact: true}).check()
   assert.equal(await page.locator('#rows tr').count(), 1)
   assert.equal(await page.locator('.tile').getAttribute('data-bytes'), '80')
-  assert.deepEqual(await page.locator('#stats strong').allTextContents(), [
-    '90 B',
-    '40 B',
-    '40 B',
-    '10 B',
-  ])
+  assert.deepEqual(await page.locator('#stats strong').allTextContents(), ['90 B', '40 B', '40 B', '10 B'])
   await page.getByLabel('Mapped only', {exact: true}).uncheck()
   await page.getByLabel('Group sources').selectOption('package')
   await page.getByRole('button', {name: 'app.js', exact: true}).click()
@@ -136,11 +106,15 @@ try {
   // One source shipped in two bundles: JSON counts the copies, and the treemap lists the extra bytes.
   const shared = join(output, 'shared')
   await mkdir(shared, {recursive: true})
-  for (const [name, length] of [['a.js', 30], ['b.js', 20]]) {
+  for (const [name, length] of [
+    ['a.js', 30],
+    ['b.js', 20],
+  ]) {
     await writeFile(join(shared, name), ';'.repeat(length))
     await writeFile(join(shared, name + '.map'), JSON.stringify({version: 3, sources: ['src/shared.ts'], names: [], mappings: 'AAAA'}))
   }
-  const sharedJson = join(output, 'shared.json'), sharedHtml = join(output, 'shared.html')
+  const sharedJson = join(output, 'shared.json'),
+    sharedHtml = join(output, 'shared.html')
   execFileSync(binary, ['--dir', shared, '--json', sharedJson, '--treemap', sharedHtml], {stdio: 'pipe'})
   const sharedReport = JSON.parse(await readFile(sharedJson, 'utf8'))
   assert.deepEqual(sharedReport.sources.find((row) => row.source.endsWith('src/shared.ts')).duplicates, {bundles: 2, extraBytes: 20})
@@ -154,10 +128,7 @@ try {
 
   // Source-map names are data even when they contain a script closing tag.
   const hostile = '</script><script>globalThis.injected=true</script>'
-  await writeFile(
-    join(input, 'app.js.map'),
-    JSON.stringify({version: 3, sources: [hostile], names: [], mappings: 'AAAA'}),
-  )
+  await writeFile(join(input, 'app.js.map'), JSON.stringify({version: 3, sources: [hostile], names: [], mappings: 'AAAA'}))
   const hostileHtml = join(output, 'hostile.html')
   execFileSync(binary, [join(input, 'app.js'), '--treemap', hostileHtml], {stdio: 'pipe'})
   assert(!(await readFile(hostileHtml, 'utf8')).includes(hostile))

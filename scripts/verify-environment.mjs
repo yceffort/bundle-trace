@@ -18,7 +18,9 @@ const server = createServer(async (request, response) => {
     response.end(await readFile(join(root, 'fixtures', 'environment.js')))
   } else if (request.url === '/' || request.url === '/?probe') {
     response.setHeader('content-type', 'text/html; charset=utf-8')
-    response.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><script src="/assets/environment.js"></script>')
+    response.end(
+      '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><script src="/assets/environment.js"></script>',
+    )
   } else {
     response.writeHead(404).end()
   }
@@ -26,7 +28,9 @@ const server = createServer(async (request, response) => {
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 const origin = `http://127.0.0.1:${server.address().port}`
 const probe = join(artifacts, 'probe.mjs')
-await writeFile(probe, `import {writeFile} from 'node:fs/promises'
+await writeFile(
+  probe,
+  `import {writeFile} from 'node:fs/promises'
 export default async function ({page}) {
   // Navigation Timing does not include CDP-emulated latency; a request's duration does.
   const timing = await page.evaluate(async () => {
@@ -35,20 +39,49 @@ export default async function ({page}) {
     return {waitMs: performance.now() - start}
   })
   await writeFile(process.env.PROBE_OUT, JSON.stringify(timing))
-}\n`)
+}\n`,
+)
 const state = join(artifacts, 'state.json')
-await writeFile(state, JSON.stringify({cookies: [{name: 'session', value: 'fixture', domain: '127.0.0.1', path: '/',
-  expires: -1, httpOnly: false, secure: false, sameSite: 'Lax'}], origins: []}))
+await writeFile(
+  state,
+  JSON.stringify({
+    cookies: [
+      {name: 'session', value: 'fixture', domain: '127.0.0.1', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax'},
+    ],
+    origins: [],
+  }),
+)
 
 async function record(name, options) {
   const out = join(artifacts, `${name}.coverage.json`)
   const probeOut = join(artifacts, `${name}.probe.json`)
-  await run(process.execPath, [join(root, 'bin', 'coldpath.mjs'), 'collect', '--url', `${origin}/`, '--dir', join(root, 'fixtures'),
-    '--prefix', '/assets/', '--wait-ms', '0', '--scenario', name, '--out', out, '--actions', probe, ...options],
-  {env: {...process.env, PROBE_OUT: probeOut}})
+  await run(
+    process.execPath,
+    [
+      join(root, 'bin', 'coldpath.mjs'),
+      'collect',
+      '--url',
+      `${origin}/`,
+      '--dir',
+      join(root, 'fixtures'),
+      '--prefix',
+      '/assets/',
+      '--wait-ms',
+      '0',
+      '--scenario',
+      name,
+      '--out',
+      out,
+      '--actions',
+      probe,
+      ...options,
+    ],
+    {env: {...process.env, PROBE_OUT: probeOut}},
+  )
   const capture = JSON.parse(await readFile(out, 'utf8'))
-  const calls = Object.fromEntries(capture.scripts[0].functions.filter((f) => f.functionName)
-    .map((f) => [f.functionName, f.ranges[0].count]))
+  const calls = Object.fromEntries(
+    capture.scripts[0].functions.filter((f) => f.functionName).map((f) => [f.functionName, f.ranges[0].count]),
+  )
   return {environment: capture.environment, calls, probe: JSON.parse(await readFile(probeOut, 'utf8'))}
 }
 
@@ -61,8 +94,20 @@ try {
   assert.equal(desktop.environment.network, null)
   assert(desktop.probe.waitMs < 400, `unthrottled request took ${desktop.probe.waitMs}ms`)
 
-  const phone = await record('phone', ['--device', 'Pixel 7', '--storage-state', state,
-    '--latency-ms', '400', '--download-kbps', '1600', '--upload-kbps', '750', '--cpu-slowdown', '4'])
+  const phone = await record('phone', [
+    '--device',
+    'Pixel 7',
+    '--storage-state',
+    state,
+    '--latency-ms',
+    '400',
+    '--download-kbps',
+    '1600',
+    '--upload-kbps',
+    '750',
+    '--cpu-slowdown',
+    '4',
+  ])
   assert.deepEqual(phone.calls, {mobileLayout: 1, desktopLayout: 0, signedIn: 1, signedOut: 0})
   assert.equal(phone.environment.device, 'Pixel 7')
   assert.equal(phone.environment.isMobile, true)
