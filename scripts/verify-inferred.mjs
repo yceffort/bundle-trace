@@ -7,8 +7,10 @@ import {join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {promisify} from 'node:util'
 import {chromium} from 'playwright'
+import {chunkModules} from '../lib/modules.mjs'
 
 const run = promisify(execFile)
+assert.deepEqual(chunkModules('(this.webpackJsonp=this.webpackJsonp||[]).push([["a"],{x1:function(t,e){e.a=1},"y2":function(){}}]);')?.modules.map((m) => m.id), ['x1', 'y2'], 'webpack 4 chunks')
 const root = fileURLToPath(new URL('../', import.meta.url))
 const out = join(root, 'artifacts', 'inferred')
 await rm(out, {recursive: true, force: true})

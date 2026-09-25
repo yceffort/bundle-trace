@@ -59,7 +59,7 @@ Each entry also records the Chrome DevTools Protocol `initiator` type and `start
 
 `coldpath modules --dir DIRECTORY --out MAP_DIRECTORY` parses every script with `@babel/parser` and looks for chunk registrations with one function per module:
 
-- webpack: `(self.webpackChunk<name> = ...).push([[chunk ids], {id: factory}])`, including the array form `[factory, ...]`.
+- webpack: `(self.webpackChunk<name> = ...).push([[chunk ids], {id: factory}])`, including the array form `[factory, ...]`, and webpack 4's default `(this.webpackJsonp = ...).push(...)`. A renamed webpack 4 `jsonpFunction` is not recognized.
 - Turbopack: `(globalThis.TURBOPACK || (globalThis.TURBOPACK = [])).push([currentScript, id, factory, id, factory, ...])`. Checked against the Next.js version pinned in the accuracy corpus; other Turbopack versions may use another layout.
 
 For each chunk it writes a source map in which every module, from its id to the end of its factory, becomes the source `webpack://inferred/<chunk global>/<module id>.js` with that text as `sourcesContent`.
