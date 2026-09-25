@@ -1,3 +1,4 @@
+pub mod annotations;
 pub mod attribution;
 pub mod baseline;
 pub mod ci;
@@ -50,6 +51,8 @@ pub struct SourceRow {
     pub package: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub estimated_compression: Option<ci::CompressedSizes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<annotations::SourceLabel>,
     #[serde(flatten)]
     pub counts: Counts,
 }
@@ -82,6 +85,8 @@ pub struct BundleRow {
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub scenario_spans: BTreeMap<String, Vec<Span>>,
     pub compression: Option<ci::CompressedSizes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loading: Option<annotations::Loading>,
     #[serde(flatten)]
     pub counts: Counts,
 }
@@ -94,6 +99,8 @@ pub struct BundleSource {
     pub content: Option<String>,
     pub first_observed: Vec<scenario::FirstObserved>,
     pub estimated_compression: Option<ci::CompressedSizes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<annotations::SourceLabel>,
     #[serde(flatten)]
     pub counts: Counts,
 }
@@ -184,6 +191,8 @@ pub struct Report {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub import_paths: Option<Vec<metadata::ImportPath>>,
     pub recommendations: Vec<recommendations::Recommendation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_generator: Option<annotations::LabelGenerator>,
 }
 
 impl Report {
@@ -315,6 +324,7 @@ pub fn analyze_with_options(
         source_compression_method: options.source_compression.then_some("isolated attributed fragments in generated order per source per bundle; non-additive estimates, not measured transfer savings"),
         import_paths: None,
         recommendations: Vec::new(),
+        label_generator: None,
     };
     for path in options.maps.keys() {
         coverage::validate_path(path)?;
@@ -479,6 +489,7 @@ pub fn analyze_with_options(
                     content: source.content.take(),
                     first_observed: phases[segment.source].clone(),
                     estimated_compression: estimates[segment.source].clone(),
+                    label: None,
                     counts: Counts::default(),
                 });
                 source_indices[segment.source] = Some(index);
@@ -601,6 +612,7 @@ pub fn analyze_with_options(
                 BTreeMap::new()
             },
             compression,
+            loading: None,
             counts,
         });
     }
@@ -673,6 +685,7 @@ fn aggregate_sources(source_counts: BTreeMap<String, Counts>) -> (Vec<SourceRow>
             source,
             package,
             estimated_compression: None,
+            label: None,
             counts,
         });
     }

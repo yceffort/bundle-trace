@@ -100,6 +100,12 @@ struct Args {
     /// Fail when unmeasured bytes exceed this budget.
     #[arg(long)]
     max_unmeasured_bytes: Option<usize>,
+    /// Inferred source labels (from `coldpath label`), keyed by report source name.
+    #[arg(long)]
+    labels: Option<PathBuf>,
+    /// Bundle load causes (from `coldpath snapshot`), keyed by bundle-relative path.
+    #[arg(long)]
+    loading: Option<PathBuf>,
     /// Print the import chain and available locations for a graph input or report source.
     #[arg(long)]
     why: Option<String>,
@@ -157,8 +163,11 @@ fn main() -> Result<()> {
         source_compression: args.source_compression,
         include: config.include,
         exclude: config.exclude,
-        // Retain sourcesContent temporarily to verify graph source snapshots.
-        details: args.details || args.html.is_some() || args.graph.is_some(),
+        // Retain sourcesContent temporarily to verify graph source snapshots and label evidence.
+        details: args.details
+            || args.html.is_some()
+            || args.graph.is_some()
+            || args.labels.is_some(),
         ..Default::default()
     };
     if let Some(selection) = selection {
@@ -248,6 +257,12 @@ fn main() -> Result<()> {
             &dir,
             &args.graph_root.unwrap_or(std::env::current_dir()?),
         )?;
+    }
+    if let Some(path) = args.labels {
+        coldpath::annotations::attach_labels(&mut report, &fs::read(path)?)?;
+    }
+    if let Some(path) = args.loading {
+        coldpath::annotations::attach_loading(&mut report, &fs::read(path)?)?;
     }
     report.recommendations = coldpath::recommendations::build(&report);
     ensure!(

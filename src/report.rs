@@ -20,6 +20,8 @@ struct HtmlReport<'a> {
     excluded_bundles: &'a [String],
     budget_failures: &'a [String],
     compression: &'a Option<crate::ci::CompressedSizes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    label_generator: &'a Option<crate::annotations::LabelGenerator>,
     bundles: Vec<HtmlBundle<'a>>,
 }
 
@@ -31,6 +33,8 @@ struct HtmlBundle<'a> {
     counts: &'a crate::Counts,
     sources: Vec<HtmlSource<'a>>,
     verification: &'a [crate::input::Verification],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    loading: &'a Option<crate::annotations::Loading>,
 }
 
 #[derive(Serialize)]
@@ -41,6 +45,8 @@ struct HtmlSource<'a> {
     has_content: bool,
     first_observed: &'a [crate::scenario::FirstObserved],
     estimated_compression: &'a Option<crate::ci::CompressedSizes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    label: &'a Option<crate::annotations::SourceLabel>,
     #[serde(flatten)]
     counts: &'a crate::Counts,
 }
@@ -99,6 +105,7 @@ pub fn html(report: &Report) -> Result<String> {
         excluded_bundles: &report.excluded_bundles,
         budget_failures: &report.budget_failures,
         compression: &report.compression,
+        label_generator: &report.label_generator,
         bundles: report
             .bundles
             .iter()
@@ -114,10 +121,12 @@ pub fn html(report: &Report) -> Result<String> {
                         has_content: s.content.is_some(),
                         first_observed: &s.first_observed,
                         estimated_compression: &s.estimated_compression,
+                        label: &s.label,
                         counts: &s.counts,
                     })
                     .collect(),
                 verification: &b.verification,
+                loading: &b.loading,
             })
             .collect(),
     })?;
@@ -165,6 +174,7 @@ pub fn treemap_with_inspector(report: &Report, include_inspector: bool) -> Resul
         excluded_bundles: &report.excluded_bundles,
         budget_failures: &report.budget_failures,
         compression: &report.compression,
+        label_generator: &report.label_generator,
         bundles: report
             .bundles
             .iter()
@@ -180,10 +190,12 @@ pub fn treemap_with_inspector(report: &Report, include_inspector: bool) -> Resul
                         has_content: false,
                         first_observed: &s.first_observed,
                         estimated_compression: &s.estimated_compression,
+                        label: &s.label,
                         counts: &s.counts,
                     })
                     .collect(),
                 verification: &b.verification,
+                loading: &b.loading,
             })
             .collect(),
     })?;

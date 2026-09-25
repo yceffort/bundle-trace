@@ -430,3 +430,55 @@ fn graph_source_hashes_reject_stale_locations_and_keep_compact_exports_compact()
         .is_err()
     );
 }
+
+#[test]
+fn labels_and_loading_attach_without_changing_counts_and_drop_absent_evidence() {
+    let f = Fixture::new();
+    let source = "var a=1;var b=2;";
+    f.write("app.js", source);
+    f.write("app.js.map", &json!({"version":3,"sources":["m/1.js","m/2.js"],"sourcesContent":["var a=1;","var b=2;"],"names":[],"mappings":"AAAA,QCAA"}).to_string());
+    let mut report = analyze_with_options(&f.0, &[], &AnalyzeOptions::default()).unwrap();
+    let before = serde_json::to_value(&report.totals).unwrap();
+    let labels = json!({"schemaVersion":1,"generator":{"provider":"test","model":"m","mode":"identify"},"sources":{
+        "m/1.js":{"name":"first","shortName":"first","kind":"app","summary":"s","reasoning":"r","evidence":["var a=1","not in source"]},
+        "m/2.js":{"summary":"only a summary"},
+        "m/missing.js":{"summary":"x"}}});
+    coldpath::annotations::attach_labels(&mut report, labels.to_string().as_bytes()).unwrap();
+    let loading = json!({"schemaVersion":1,"bundles":{"app.js":{"load":"html","initiator":"parser","startMs":5},"gone.js":{"load":"dynamic"}}});
+    coldpath::annotations::attach_loading(&mut report, loading.to_string().as_bytes()).unwrap();
+    let value = serde_json::to_value(&report).unwrap();
+    assert_eq!(value["totals"], before);
+    let first = value["sources"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["source"] == "m/1.js")
+        .unwrap();
+    assert_eq!(first["label"]["evidence"], json!(["var a=1"]));
+    assert_eq!(value["bundles"][0]["sources"][0]["label"]["name"], "first");
+    assert_eq!(
+        value["bundles"][0]["sources"][1]["label"],
+        json!({"summary":"only a summary"})
+    );
+    assert_eq!(
+        value["bundles"][0]["loading"],
+        json!({"load":"html","initiator":"parser","startMs":5})
+    );
+    assert_eq!(value["labelGenerator"]["model"], "m");
+    let warnings = value["warnings"].to_string();
+    assert!(warnings.contains("m/1.js: dropped 1 label evidence"));
+    assert!(warnings.contains("1 --labels entries match no report source"));
+    assert!(warnings.contains("1 --loading entries match no analyzed bundle"));
+    let bad = json!({"schemaVersion":1,"bundles":{"app.js":{"load":"prefetch"}}});
+    assert!(
+        coldpath::annotations::attach_loading(&mut report, bad.to_string().as_bytes()).is_err()
+    );
+    let future = json!({"schemaVersion":2,"sources":{}});
+    assert!(
+        coldpath::annotations::attach_labels(&mut report, future.to_string().as_bytes()).is_err()
+    );
+    let extra = json!({"schemaVersion":1,"sources":{"m/1.js":{"confidence":"high"}}});
+    assert!(
+        coldpath::annotations::attach_labels(&mut report, extra.to_string().as_bytes()).is_err()
+    );
+}
