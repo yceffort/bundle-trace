@@ -239,12 +239,37 @@ impl Decoder<'_> {
             }
             DecodedMap::Regular(map) => {
                 // Resolve each source path once per map, never once per token.
-                let mut ids = Vec::with_capacity(map.get_source_count() as usize);
+                let raw: Vec<&str> = (0..map.get_source_count())
+                    .map(|i| map.get_source(i).unwrap_or(UNMAPPED))
+                    .collect();
+                let resolved: Vec<String> = raw
+                    .iter()
+                    .map(|&source| {
+                        self.source_paths
+                            .map_or_else(|| source.to_owned(), |paths| paths.resolve(source))
+                    })
+                    .collect();
+                let mut spellings: BTreeMap<&str, Vec<u32>> = BTreeMap::new();
+                for (i, name) in (0..).zip(&resolved) {
+                    spellings.entry(name).or_default().push(i);
+                }
+                let mut ids = Vec::with_capacity(raw.len());
                 for i in 0..map.get_source_count() {
-                    let source = map.get_source(i).unwrap_or(UNMAPPED);
-                    let source = self
-                        .source_paths
-                        .map_or_else(|| source.to_owned(), |paths| paths.resolve(source));
+                    let (raw, resolved) = (raw[i as usize], &resolved[i as usize]);
+                    // Spellings that resolve alike but carry different contents are different
+                    // modules (vue-loader emits compiled `./x.vue` beside the original `x.vue`).
+                    let content = map.get_source_contents(i);
+                    let distinct = raw != resolved
+                        && content.is_some()
+                        && spellings[resolved.as_str()].iter().any(|&j| {
+                            map.get_source_contents(j)
+                                .is_some_and(|other| Some(other) != content)
+                        });
+                    let source = if distinct {
+                        raw.to_owned()
+                    } else {
+                        resolved.clone()
+                    };
                     let id = if let Some(&id) = self.source_ids.get(&source) {
                         id
                     } else {

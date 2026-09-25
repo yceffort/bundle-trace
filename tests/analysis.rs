@@ -985,6 +985,37 @@ fn source_paths_normalize_before_indexed_map_deduplication() {
 }
 
 #[test]
+fn source_paths_keep_spellings_whose_contents_differ_within_one_map() {
+    let fixture = Fixture::new();
+    fixture.write("app.js", "12345678");
+    fixture.write(
+        "app.js.map",
+        &json!({"version":3,"sources":["webpack:///./src/x.vue","webpack:///src/x.vue"],
+            "sourcesContent":["compiled","original"],"names":[],"mappings":"AAAA,ICAA"})
+        .to_string(),
+    );
+    for details in [true, false] {
+        let options = coldpath::AnalyzeOptions {
+            details,
+            ..Default::default()
+        };
+        let report = coldpath::analyze_with_options(&fixture.0, &[], &options).unwrap();
+        let sources = &report.bundles[0].sources;
+        assert_eq!(
+            sources
+                .iter()
+                .map(|s| (s.source.as_str(), s.counts.bytes))
+                .collect::<Vec<_>>(),
+            vec![("webpack:///./src/x.vue", 4), ("webpack:///src/x.vue", 4)]
+        );
+        if details {
+            assert_eq!(sources[0].content.as_deref(), Some("compiled"));
+            assert_eq!(sources[1].content.as_deref(), Some("original"));
+        }
+    }
+}
+
+#[test]
 fn url_mapping_is_explicit_and_rejects_traversal() {
     let fixture = Fixture::new();
     fixture.write("app.js", "abcd");
