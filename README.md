@@ -168,6 +168,37 @@ bundle-trace --dir dist --baseline artifacts/main.json \
 
 Use the same analysis-root convention and bundle selection for both builds. Reports use schema version 3 with normalized source paths; regenerate older baselines. Add matching coverage scenarios to compare execution changes, and `--initial-scenario initial --max-added-unobserved-bytes 10000` to budget initial unobserved growth. See [scenario and PR comparisons](docs/usage.md#scenarios-and-execution-phases) for measurement requirements and visual controls.
 
+### GitHub Action
+
+The repository is also a composite action. It builds the analyzer, runs your analyzer options on a checkout of the base branch and on the pull request build, uploads the report JSON, Markdown summary, and HTML treemap as an artifact, and creates or updates a single pull request comment. Budget failures fail the job after the comment is written.
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+steps:
+  - uses: actions/checkout@v6
+  - uses: actions/checkout@v6
+    with:
+      ref: ${{ github.event.pull_request.base.sha }}
+      path: base
+  # Build both checkouts and record coverage here.
+  - uses: yceffort/coldpath@main
+    with:
+      base-directory: base
+      args: |
+        --dir
+        dist
+        --coverage
+        artifacts/initial.coverage.json
+        --initial-scenario
+        initial
+      max-added-bytes: 10000
+      max-added-unobserved-bytes: 10000
+```
+
+`args` takes one argument per line and must not include output options. Use `baseline` instead of `base-directory` to pass a report you already have, for example one downloaded from the base branch's last run. The comment is found by a marker and must be written by a bot account (the default `GITHUB_TOKEN` is). Pull requests from forks get a read-only token, so the comment step only warns there; the artifact is still uploaded. The runner needs Rust (`cargo`). [`pr-report.yml`](.github/workflows/pr-report.yml) runs the action on this repository's recorded example.
+
 ## Development
 
 ```sh
