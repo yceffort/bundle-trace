@@ -79,7 +79,26 @@ coldpath collect --scenarios coldpath.scenarios.json
 coldpath analyze --scenarios coldpath.scenarios.json --html artifacts/combined.html
 ```
 
-`collect` writes `<out>/<name>.coverage.json` for each scenario (default `out`: `coldpath-coverage`). `analyze` adds `--dir`, one `--coverage` per scenario, `--scenario-order` in file order, and `--initial-scenario` set to the first scenario unless you pass it, then forwards your other options. Paths are relative to the scenario file. A scenario `url` resolves against the top-level `url`; `prefix` and `waitMs` can be set at the top level or per scenario. Names may contain letters, digits, `_`, `.`, and `-`.
+`collect` writes `<out>/<name>.coverage.json` for each scenario (default `out`: `coldpath-coverage`). `analyze` adds `--dir`, one `--coverage` per scenario, `--scenario-order` in file order, and `--initial-scenario` set to the first scenario unless you pass it, then forwards your other options. Paths are relative to the scenario file. A scenario `url` resolves against the top-level `url`; `prefix`, `waitMs`, and the [environment options](#device-throttling-and-authenticated-state) can be set at the top level or per scenario. Names may contain letters, digits, `_`, `.`, and `-`.
+
+## Device, throttling, and authenticated state
+
+By default the collector uses a 1280x900 desktop viewport with no throttling and an empty browser profile.
+
+| CLI option | Scenario file key | Effect |
+| --- | --- | --- |
+| `--device NAME` | `device` | A [Playwright device descriptor](https://playwright.dev/docs/emulation#devices) such as `"Pixel 7"`: viewport, user agent, touch, mobile mode, and device scale factor. Recording always uses Chromium, whatever the descriptor's default browser. |
+| `--viewport WxH` | `viewport: {width, height}` | Overrides the device viewport. |
+| `--user-agent UA` | `userAgent` | Overrides the user agent. |
+| `--device-scale-factor N` | `deviceScaleFactor` | Overrides the pixel ratio. |
+| `--mobile`, `--touch` | `isMobile`, `hasTouch` | Mobile meta-viewport handling and touch events. |
+| `--latency-ms N --download-kbps N --upload-kbps N` | `network: {latencyMs, downloadKbps, uploadKbps}` | Chromium network emulation. All three values are required. |
+| `--cpu-slowdown N` | `cpuSlowdown` | Chromium CPU throttling rate (`1` is no slowdown). |
+| `--storage-state FILE` | `storageState` | A Playwright [storage state](https://playwright.dev/docs/auth) file with cookies and local storage, for example from a logged-in session. |
+
+Explicit options override the device's values. The envelope's `environment` records the device name, viewport, effective user agent, scale factor, mobile and touch flags, network and CPU settings, and whether a storage state was loaded. It never records the storage state's contents or path. Keep storage state files out of version control; they usually contain session cookies.
+
+Throttling changes which code runs only when the application reacts to timing (for example, timeouts or network-dependent fallbacks). Coverage from throttled recordings is still not a performance measurement.
 
 ## What is recorded
 

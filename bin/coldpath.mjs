@@ -8,6 +8,8 @@ import {loadScenarios} from '../lib/scenarios.mjs'
 const usage = `Usage:
   coldpath collect --scenarios coldpath.scenarios.json
   coldpath collect --url URL --dir DIRECTORY --out FILE [--prefix PATH] [--scenario NAME] [--actions FILE] [--wait-ms N]
+                   [--device NAME] [--viewport WxH] [--user-agent UA] [--device-scale-factor N] [--mobile] [--touch]
+                   [--latency-ms N --download-kbps N --upload-kbps N] [--cpu-slowdown N] [--storage-state FILE]
   coldpath graph --format esbuild|webpack|turbopack --input FILE --root BUILD_ROOT --out graph.json [--environment client|server|all]
   coldpath analyze [--scenarios coldpath.scenarios.json] [ANALYZER OPTIONS...]
   coldpath [ANALYZER OPTIONS...]
@@ -25,13 +27,32 @@ async function main() {
     const {values} = parseArgs({args: rest, options: {
       scenarios: {type: 'string'}, url: {type: 'string'}, dir: {type: 'string'}, out: {type: 'string'},
       prefix: {type: 'string'}, scenario: {type: 'string'}, actions: {type: 'string'}, 'wait-ms': {type: 'string'},
+      device: {type: 'string'}, viewport: {type: 'string'}, 'user-agent': {type: 'string'},
+      'device-scale-factor': {type: 'string'}, mobile: {type: 'boolean'}, touch: {type: 'boolean'},
+      'latency-ms': {type: 'string'}, 'download-kbps': {type: 'string'}, 'upload-kbps': {type: 'string'},
+      'cpu-slowdown': {type: 'string'}, 'storage-state': {type: 'string'},
     }})
     if (values.scenarios) {
       const {scenarios} = await loadScenarios(values.scenarios)
       for (const scenario of scenarios) await collect(scenario)
       return 0
     }
-    await collect({...values, waitMs: values['wait-ms'] === undefined ? undefined : Number(values['wait-ms'])})
+    const number = (key) => values[key] === undefined ? undefined : Number(values[key])
+    let viewport
+    if (values.viewport) {
+      const match = /^(\d+)x(\d+)$/.exec(values.viewport)
+      if (!match) throw new Error('--viewport must be WIDTHxHEIGHT')
+      viewport = {width: Number(match[1]), height: Number(match[2])}
+    }
+    const throttled = ['latency-ms', 'download-kbps', 'upload-kbps'].some((key) => values[key] !== undefined)
+    await collect({
+      url: values.url, dir: values.dir, out: values.out, prefix: values.prefix, scenario: values.scenario,
+      actions: values.actions, waitMs: number('wait-ms'), device: values.device, viewport,
+      userAgent: values['user-agent'], deviceScaleFactor: number('device-scale-factor'),
+      isMobile: values.mobile, hasTouch: values.touch, cpuSlowdown: number('cpu-slowdown'),
+      network: throttled ? {latencyMs: number('latency-ms'), downloadKbps: number('download-kbps'), uploadKbps: number('upload-kbps')} : undefined,
+      storageState: values['storage-state'],
+    })
     return 0
   }
   if (command === 'graph') {

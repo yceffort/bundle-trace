@@ -31,6 +31,7 @@ Use Node.js 24+ and the pnpm version in `package.json`. The repository root is t
 - `scripts/verify.mjs`: captures actual Chromium coverage and compares every interval with an independent per-code-unit reference implementation.
 - `scripts/verify-formats.mjs`: imports real Playwright and Node coverage, validates Chrome-shaped input, and exercises the offline HTML UI and embedded-data escaping.
 - `scripts/verify-collector.mjs`: runs `coldpath collect` as a separate process against a local fixture, including a custom interaction and stale-source rejection.
+- `scripts/verify-environment.mjs`: device emulation, viewport override, and saved cookie state must change which fixture functions V8 records; throttled requests must take at least the emulated latency; cookie values must stay out of the envelope.
 - `scripts/verify-treemap.mjs`: checks hierarchical navigation, complete small-file access, area totals, coverage colors/data, search, package grouping, keyboard navigation, offline operation, and mobile layout.
 - `scripts/verify-comparison.mjs`: three ordered scenario colors, missing initial evidence, baseline changes, graph locations, estimates, recommendations, scenario-specific inspection, and mobile/offline behavior.
 - `tests/workflows.rs`: scenario ordering/Unicode partitions, missing measurements, compression fragments, graph path selection/validation, actionable evidence, and coverage budget failures.
