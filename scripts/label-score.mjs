@@ -11,8 +11,19 @@ import {chunkModules} from '../lib/modules.mjs'
 export const APPLICATION = '[application]'
 const NPM_NAME = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
 
-// The package that owns an original source path: the last node_modules segment, so pnpm's .pnpm store resolves.
+// Packages that ship copies of other packages inside themselves. Each entry is explicit and documented.
+const VENDORED = [
+  // Next.js precompiles dependencies such as path-to-regexp and process into next/dist/compiled/<package>.
+  /node_modules\/next\/dist\/compiled\/((?:@[^/]+\/)?[^/]+)\//,
+]
+
+// The package that owns an original source path: a vendored copy's own package, else the last node_modules segment,
+// so pnpm's .pnpm store resolves.
 export function packageOf(source) {
+  for (const pattern of VENDORED) {
+    const vendored = source.match(pattern)?.[1]
+    if (vendored) return vendored
+  }
   const match = [...source.matchAll(/node_modules\/((?:@[^/]+\/)?[^/]+)/g)].at(-1)?.[1]
   return match && match !== '.pnpm' ? match : APPLICATION
 }

@@ -5,6 +5,11 @@ import {APPLICATION, guessedPackage, packageOf, score} from './label-score.mjs'
 assert.equal(packageOf('webpack://app/./node_modules/.pnpm/react-dom@19.3.0/node_modules/react-dom/cjs/client.js'), 'react-dom')
 assert.equal(packageOf('webpack:///../node_modules/@gitlab/ui/src/link.vue'), '@gitlab/ui')
 assert.equal(packageOf('webpack:///src/entry.js'), APPLICATION)
+assert.equal(
+  packageOf('turbopack:///[project]/node_modules/.pnpm/next@16.3.6/node_modules/next/dist/compiled/path-to-regexp/index.js'),
+  'path-to-regexp',
+)
+assert.equal(packageOf('turbopack:///[project]/node_modules/.pnpm/next@16.3.6/node_modules/next/src/shared/lib/omit.ts'), 'next')
 assert.equal(guessedPackage('react-dom/client'), 'react-dom')
 assert.equal(guessedPackage('@gitlab/ui (button)'), '@gitlab/ui')
 assert.equal(guessedPackage('@gitlab'), null)

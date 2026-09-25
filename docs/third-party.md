@@ -132,7 +132,16 @@ Identity guesses are checked mechanically. An evidence string is kept only if it
 - exact package: the package a guess names (`react-dom/client` names `react-dom`; scoped names are kept whole) must equal the owning package. Substring and same-family names do not count (`@snowplow/browser-tracker` is not `@snowplow/browser-tracker-core`); a different name counts only through an explicit alias passed to the scorer.
 - application features: counted, never scored, because there is no reference to check them against.
 
-Modules whose code comes from several packages, and guesses the evidence filter dropped, are counted and left out of both scores. `scripts/verify-label-score.mjs` holds the scorer's negative and positive controls.
+Modules whose code comes from several packages, and guesses the evidence filter dropped, are counted and left out of both scores. One vendoring rule is built in: code under `next/dist/compiled/<package>` belongs to `<package>`. `scripts/verify-label-score.mjs` holds the scorer's negative and positive controls.
+
+Measured on 2026-09-25 with `claude-haiku-4-5`, two runs each (the model's answers vary between runs), on the Next.js 16.3.6 Turbopack build (129 labeled modules):
+
+| Identify prompt | Exact package | Package or app |
+| --- | ---: | ---: |
+| Before | 75.0%, 69.2% (81/108, 72/104) | 84.1%, 78.9% |
+| Current: exact npm names, framework internals named after the framework | 86.8%, 87.0% (92/106, 94/108) | 93.7%, 93.8% |
+
+The webpack build has only 5 or 6 package modules and is too small to compare. The corpus is mostly Next.js and React, and the prompt names Next.js as an example, so part of the gain may not carry over to other sites. Whole-chunk labeling (`contents`) is not measured, because the corpus has no whole-chunk sources.
 
 Providers:
 
