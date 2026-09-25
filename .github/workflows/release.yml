@@ -59,12 +59,9 @@ jobs:
       - run: node scripts/release-manifest.mjs "$GITHUB_REF_NAME"
       # Platform packages first: the main package's optionalDependencies must resolve when it appears.
       # The ./ prefix keeps npm from reading dist/<name>.tgz as a GitHub user/repo shorthand.
+      # npm trusted publishing: authenticated by this job's OIDC token (id-token: write), no npm token.
       - run: for tarball in ./dist/*.tgz; do npm publish "$tarball" --access public --provenance; done
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: gh release create "$GITHUB_REF_NAME" dist/*.tgz --generate-notes --verify-tag
         env:
           GH_TOKEN: ${{ github.token }}
