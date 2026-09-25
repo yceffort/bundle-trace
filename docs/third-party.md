@@ -62,7 +62,7 @@ Each entry also records the Chrome DevTools Protocol `initiator` type and `start
 - webpack: `(self.webpackChunk<name> = ...).push([[chunk ids], {id: factory}])`, including the array form `[factory, ...]`, and webpack 4's default `(this.webpackJsonp = ...).push(...)`. A renamed webpack 4 `jsonpFunction` is not recognized.
 - Turbopack: `(globalThis.TURBOPACK || (globalThis.TURBOPACK = [])).push([currentScript, id, factory, id, factory, ...])`. Checked against the Next.js version pinned in the accuracy corpus; other Turbopack versions may use another layout.
 
-For each chunk it writes a source map in which every module, from its id to the end of its factory, becomes the source `webpack://inferred/<chunk global>/<module id>.js` with that text as `sourcesContent`.
+For each chunk it writes a source map in which every module's factory body becomes the source `webpack://inferred/<chunk global>/<module id>.js` with that text as `sourcesContent`. The factory header (`id:(e,t,n)=>` or `id:function(e,t,n)`) is left out.
 
 With `--chunks`, a script without recognizable modules (for example Rollup or Vite output) becomes a single source, `webpack://inferred/chunk/<bundle path>`, holding the whole file. That gives `label` something to read; it recovers no boundaries.
 
@@ -73,7 +73,7 @@ Limitations:
 - Only webpack and Turbopack chunk registrations are recognized. Rollup, Vite, and esbuild hoist modules into one scope per chunk, so their output keeps no module boundaries to recover; `--chunks` can only treat such a chunk as a whole.
 - A factory is the smallest unit. Module concatenation (webpack) and scope hoisting merge many original modules into one factory, and those cannot be separated.
 - As with any source map, line terminators and the text between factories are unmapped.
-- Coverage counts the factory's `id:(e,t,n)=>` header as observed when its chunk ran, even if the factory itself was never called. A factory whose observed bytes equal that header never executed.
+- Coverage counts a factory's header as observed when its chunk ran, even if the factory itself was never called. Headers are therefore left unmapped: their bytes appear under `[unmapped]`, and a module whose factory never executed has 0 observed bytes. Bundle totals are unchanged.
 - Module ids name modules only within one webpack runtime. Sources are grouped by chunk global so that two runtimes on the same page do not collide.
 
 ## label

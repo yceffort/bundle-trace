@@ -106,18 +106,21 @@ try {
   const report = JSON.parse(await readFile(join(out, 'report.json'), 'utf8'))
   const bundle = report.bundles.find((row) => row.path === `${host}/a/chunk.js`)
   assert.equal(bundle.loading.load, 'html')
+  // A source is the factory body; the `id:(e)=>` header stays unmapped, as do line terminators.
+  const body = (code) => code.slice(code.indexOf('{'))
   for (const [id, code] of Object.entries(modules)) {
     const row = bundle.sources.find((source) => source.source === `webpack://inferred/webpackChunk_test/${id}.js`)
-    // Line terminators stay unmapped, as with any source map.
-    assert.equal(row.bytes, Buffer.byteLength(`${id}:${code}`.replaceAll('\n', '')), `module ${id} bytes`)
-    assert.equal(row.content, `${id}:${code}`)
+    assert.equal(row.bytes, Buffer.byteLength(body(code).replaceAll('\n', '')), `module ${id} bytes`)
+    assert.equal(row.content, body(code))
   }
   const byId = (id) => bundle.sources.find((source) => source.source.endsWith(`/${id}.js`))
   assert.equal(byId(10).unobservedBytes, 0, 'module 10 ran completely')
-  assert(byId(11).unobservedBytes > byId(11).observedBytes, 'module 11 factory never ran')
+  assert.equal(byId(10).observedBytes, byId(10).bytes)
+  assert.equal(byId(11).observedBytes, 0, 'module 11 factory never ran')
   assert.equal(bundle.sources.reduce((sum, row) => sum + row.bytes, 0), bundle.bytes)
+  assert.equal(bundle.bytes, Buffer.byteLength(chunk), 'bundle totals keep the header bytes, under [unmapped]')
   const turbopack = report.bundles.find((row) => row.path === `${host}/a/turbo.js`)
-  for (const [id, text] of [['20', '20,e=>{e.x="turbo-sentinel"}'], ['21', '"21",function(e){\n  e.y=1\n}']]) {
+  for (const [id, text] of [['20', '{e.x="turbo-sentinel"}'], ['21', '{\n  e.y=1\n}']]) {
     const row = turbopack.sources.find((source) => source.source === `webpack://inferred/TURBOPACK/${id}.js`)
     assert.equal(row.content, text)
     assert.equal(row.bytes, Buffer.byteLength(text.replaceAll('\n', '')), `Turbopack module ${id} bytes`)
