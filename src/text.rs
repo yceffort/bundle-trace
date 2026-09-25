@@ -103,6 +103,15 @@ impl TextIndex {
         self.byte(start + column as usize)
     }
 
+    /// Length of a line in UTF-16 units, excluding its terminator.
+    pub fn line_len(&self, line: u32) -> Result<usize> {
+        let &(start, end) = self
+            .lines
+            .get(line as usize)
+            .ok_or_else(|| anyhow!("source-map line {line} is outside generated source"))?;
+        Ok(end - start)
+    }
+
     pub fn line_end(&self, line: u32) -> Result<usize> {
         let &(_, end) = self
             .lines

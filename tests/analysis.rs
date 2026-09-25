@@ -754,6 +754,132 @@ fn out_of_line_mapping_never_spills_into_next_line() {
 }
 
 #[test]
+fn rejected_mappings_report_coordinates_neighbors_and_affected_sources() {
+    let a = |line: u32, column: u32| json!({"line": line, "column": column});
+    let mapping = |line, column, source, original| json!({"generatedLine": line, "generatedColumn": column, "source": source, "original": original});
+    for (source, map, reason, rejected, previous, next, region, assignments, linked) in [
+        (
+            // B's mapping at 7 falls inside the surrogate pair; A keeps [0, 10).
+            "abcdef🔥gh",
+            json!({"version":3,"sources":["a.js","b.js"],"names":[],"mappings":"AAAA,OCAA,CAAI"}),
+            "insideSurrogatePair",
+            mapping(0, 7, "b.js", a(0, 0)),
+            mapping(0, 0, "a.js", a(0, 0)),
+            mapping(0, 8, "b.js", a(0, 4)),
+            json!({"start":0,"end":10,"startUtf16":0,"endUtf16":8}),
+            json!([{"start":0,"end":10,"source":"a.js"}]),
+            vec![("a.js", vec![0]), ("b.js", vec![0])],
+        ),
+        (
+            "abc\nxyz",
+            json!({"version":3,"sources":["a.js","b.js"],"names":[],"mappings":"AAAA,ECAA,GAAA"}),
+            "columnOutsideLine",
+            mapping(0, 5, "b.js", a(0, 0)),
+            mapping(0, 2, "b.js", a(0, 0)),
+            json!(null),
+            json!({"start":2,"end":3,"startUtf16":2,"endUtf16":3}),
+            json!([{"start":2,"end":3,"source":"b.js"}]),
+            vec![("a.js", vec![]), ("b.js", vec![0])],
+        ),
+        (
+            // Section offsets apply: the local column 2 is generated column 6.
+            "abcde🔥g",
+            json!({"version":3,"sections":[
+                {"offset":{"line":0,"column":0},"map":{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAA"}},
+                {"offset":{"line":0,"column":4},"map":{"version":3,"sources":["b.js"],"names":[],"mappings":"AAAA,EAAE"}}
+            ]}),
+            "insideSurrogatePair",
+            mapping(0, 6, "b.js", a(0, 2)),
+            mapping(0, 4, "b.js", a(0, 0)),
+            json!(null),
+            json!({"start":4,"end":10,"startUtf16":4,"endUtf16":8}),
+            json!([{"start":4,"end":10,"source":"b.js"}]),
+            vec![("a.js", vec![]), ("b.js", vec![0])],
+        ),
+    ] {
+        let fixture = Fixture::new();
+        fixture.write("app.js", source);
+        fixture.write("app.js.map", &map.to_string());
+        let coverage = fixture.coverage(
+            "run.json",
+            source,
+            json!([{"startOffset":0,"endOffset":source.encode_utf16().count(),"count":1}]),
+        );
+        let report = analyze(&fixture.0, &[coverage]).unwrap();
+        let bundle = &report.bundles[0];
+        let mut expected = rejected;
+        expected["reason"] = json!(reason);
+        expected["previous"] = previous;
+        expected["next"] = next;
+        expected["inspectRegion"] = region;
+        expected["assignments"] = assignments;
+        assert_eq!(
+            serde_json::to_value(&bundle.mapping_diagnostics).unwrap(),
+            json!([expected])
+        );
+        for (name, indices) in linked {
+            let row = bundle.sources.iter().find(|s| s.source == name).unwrap();
+            assert_eq!(row.mapping_diagnostics, indices, "{name}");
+        }
+        // Diagnostics never clamp or drop bytes.
+        assert_eq!(report.totals.bytes, source.len());
+        assert_eq!(report.totals.observed_bytes, source.len());
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|w| w.contains("ignored 1 mapping points"))
+        );
+    }
+}
+
+#[test]
+fn summary_limits_mapping_diagnostics_but_keeps_exact_counts() {
+    let fixture = Fixture::new();
+    fixture.write("app.js", "ab");
+    // Columns 4..=152 all lie beyond the two-unit line.
+    let mappings = format!("AAAA,IAAA{}", ",CAAA".repeat(149));
+    fixture.write(
+        "app.js.map",
+        &json!({"version":3,"sources":["a.js"],"names":[],"mappings":mappings}).to_string(),
+    );
+    let check = |report: &coldpath::Report, kept: usize| {
+        let bundle = &report.bundles[0];
+        assert_eq!(bundle.rejected_mappings, 150);
+        assert_eq!(bundle.mapping_diagnostics.len(), kept);
+        assert_eq!(bundle.omitted_mapping_diagnostics, 150 - kept);
+        assert_eq!(bundle.sources[0].rejected_mappings, 150);
+        assert_eq!(
+            bundle.sources[0].mapping_diagnostics,
+            (0..kept).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            report
+                .warnings
+                .iter()
+                .any(|w| w.contains("first 100 of 150")),
+            kept < 150
+        );
+        assert_eq!(report.totals.bytes, 2);
+    };
+    let summary = coldpath::analyze_with_options(
+        &fixture.0,
+        &[],
+        &coldpath::AnalyzeOptions {
+            details: false,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    check(&summary, 100);
+    let mut detailed = analyze(&fixture.0, &[]).unwrap();
+    check(&detailed, 150);
+    detailed.strip_details();
+    detailed.strip_details();
+    check(&detailed, 100);
+}
+
+#[test]
 fn standard_formats_agree_and_preserve_capture_evidence() {
     let fixture = Fixture::new();
     let source = "한🔥x";

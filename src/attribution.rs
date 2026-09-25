@@ -42,7 +42,33 @@ pub(crate) struct IndexedSource {
 pub(crate) struct IndexedAttribution {
     pub segments: Vec<IndexedSegment>,
     pub sources: Vec<IndexedSource>,
-    pub invalid_points: usize,
+    pub rejected: Vec<Rejection>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RejectionReason {
+    ColumnOutsideLine,
+    InsideSurrogatePair,
+}
+
+/// A decoded mapping at an absolute generated position (index-map offsets applied).
+#[derive(Clone, Copy)]
+pub(crate) struct Mapping {
+    pub generated: Position,
+    pub source: usize,
+    pub original: Option<OriginalPosition>,
+}
+
+/// A mapping that could not be placed. The region spans the same-line neighbors
+/// (or line edges): its bytes may belong elsewhere, but no byte error is proven.
+pub(crate) struct Rejection {
+    pub reason: RejectionReason,
+    pub mapping: Mapping,
+    pub previous: Option<Mapping>,
+    pub next: Option<Mapping>,
+    pub start: usize,
+    pub end: usize,
 }
 
 /// Attribute each mapping to the next mapping on the SAME line or line end.
@@ -82,7 +108,7 @@ pub fn decode_with_contents(
                 original: s.original,
             })
             .collect(),
-        invalid_points: decoded.invalid_points,
+        invalid_points: decoded.rejected.len(),
         contents: decoded
             .sources
             .into_iter()
@@ -110,13 +136,44 @@ pub(crate) fn decode_indexed(
             content: None,
         }],
         source_ids: BTreeMap::from([(UNMAPPED.to_owned(), 0)]),
-        invalid_points: 0,
+        rejected: Vec::new(),
     };
     decoder.collect(&map, (0, 0), None)?;
     // Stable ordering preserves last-mapping-wins at duplicate positions,
     // including explicit boundaries of empty/nested index-map sections.
     if !decoder.points.is_sorted_by_key(|p| p.position) {
         decoder.points.sort_by_key(|p| p.position);
+    }
+    let effective = |p: &Point| Mapping {
+        generated: p.position,
+        source: p.source,
+        original: p.original,
+    };
+    let mut rejected = Vec::with_capacity(decoder.rejected.len());
+    for (reason, mapping) in decoder.rejected {
+        let line = mapping.generated.0;
+        let points = &decoder.points;
+        let split = points.partition_point(|p| p.position < mapping.generated);
+        // Duplicate positions keep the last mapping, as attribution does.
+        let previous = split
+            .checked_sub(1)
+            .map(|i| &points[i])
+            .filter(|p| p.position.0 == line);
+        let next = points
+            .get(split)
+            .filter(|p| p.position.0 == line)
+            .map(|first| {
+                &points
+                    [split + points[split..].partition_point(|p| p.position == first.position) - 1]
+            });
+        rejected.push(Rejection {
+            reason,
+            mapping,
+            start: previous.map_or_else(|| text.position(line, 0), |p| Ok(p.byte))?,
+            end: next.map_or_else(|| text.line_end(line), |p| Ok(p.byte))?,
+            previous: previous.map(effective),
+            next: next.map(effective),
+        });
     }
     let mut points = decoder.points.into_iter().peekable();
     let mut result = Vec::with_capacity(points.len() + 1);
@@ -163,11 +220,11 @@ pub(crate) fn decode_indexed(
     Ok(IndexedAttribution {
         segments: result,
         sources: decoder.sources,
-        invalid_points: decoder.invalid_points,
+        rejected,
     })
 }
 
-type Position = (u32, u32);
+pub(crate) type Position = (u32, u32);
 
 fn offset_position(base: Position, local: Position) -> Result<Position> {
     Ok((
@@ -198,7 +255,7 @@ struct Decoder<'a> {
     points: Vec<Point>,
     sources: Vec<IndexedSource>,
     source_ids: BTreeMap<String, usize>,
-    invalid_points: usize,
+    rejected: Vec<(RejectionReason, Mapping)>,
 }
 
 impl Decoder<'_> {
@@ -307,19 +364,30 @@ impl Decoder<'_> {
                         continue;
                     }
                     self.text.line_end(position.0)?;
+                    let source = ids.get(token.get_src_id() as usize).copied().unwrap_or(0);
+                    let original = token.get_source().map(|_| OriginalPosition {
+                        line: token.get_src_line(),
+                        column: token.get_src_col(),
+                    });
                     let Ok(byte) = self.text.position(position.0, position.1) else {
-                        self.invalid_points += 1;
+                        let reason = if self.text.line_len(position.0)? < position.1 as usize {
+                            RejectionReason::ColumnOutsideLine
+                        } else {
+                            RejectionReason::InsideSurrogatePair
+                        };
+                        let mapping = Mapping {
+                            generated: position,
+                            source,
+                            original,
+                        };
+                        self.rejected.push((reason, mapping));
                         continue;
                     };
-                    let source = ids.get(token.get_src_id() as usize).copied().unwrap_or(0);
                     self.points.push(Point {
                         position,
                         byte,
                         source,
-                        original: token.get_source().map(|_| OriginalPosition {
-                            line: token.get_src_line(),
-                            column: token.get_src_col(),
-                        }),
+                        original,
                     });
                 }
             }
