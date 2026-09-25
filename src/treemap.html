@@ -24,6 +24,8 @@
         --unknown-initial: #f1df99;
         --growth: #efc3c3;
         --reduction: #bce0d7;
+        --ran: #3e9b73;
+        --never: #d9773d;
       }
       @media (prefers-color-scheme: dark) {
         :root {
@@ -40,6 +42,8 @@
           --unknown-initial: #655423;
           --growth: #713d47;
           --reduction: #27564d;
+          --ran: #5cc79a;
+          --never: #e89a68;
         }
       }
       * {
@@ -99,6 +103,84 @@
         font-size: 25px;
         margin-top: 6px;
         font-variant-numeric: tabular-nums;
+      }
+      .headline {
+        font-size: 26px;
+        line-height: 1.3;
+        letter-spacing: -0.4px;
+        font-weight: 650;
+        max-width: 32em;
+        margin: 6px 0 10px;
+      }
+      .headline mark {
+        color: inherit;
+        background: var(--unobserved);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      .link {
+        border: 0;
+        padding: 0;
+        background: none;
+        color: var(--accent);
+        text-decoration: underline;
+      }
+      .findings {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+        gap: 16px 32px;
+        margin: 28px 0 8px;
+      }
+      .findings h2 {
+        font-size: 15px;
+      }
+      .findings ol {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0 0;
+      }
+      .findings li button {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 2px 12px;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        border-top: 1px solid var(--border);
+        border-radius: 0;
+        padding: 10px 2px;
+        background: none;
+        overflow-wrap: anywhere;
+      }
+      .findings li button:hover strong {
+        text-decoration: underline;
+      }
+      .findings .value {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .findings small {
+        grid-column: 1 / -1;
+      }
+      .meter {
+        grid-column: 1 / -1;
+        display: block;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--never);
+        overflow: hidden;
+      }
+      .meter i {
+        display: block;
+        height: 100%;
+        background: var(--ran);
+      }
+      #options > summary {
+        color: var(--accent);
+        margin-top: 10px;
+      }
+      #options .controls {
+        margin-top: 10px;
       }
       .panel {
         background: var(--panel);
@@ -324,15 +406,20 @@
   <body>
     <main>
       <header>
-        <div class="eyebrow">BUNDLE TRACE</div>
-        <h1>Bundle explorer</h1>
-        <p class="muted">Find what contributes to your JavaScript bundles.</p>
+        <p class="muted">JavaScript report</p>
+        <h1 id="headline" class="headline">Bundle explorer</h1>
+        <p id="subline" class="muted"></p>
       </header>
-      <div id="stats" class="stats"></div>
-      <p class="note">
-        Generated UTF-8 bytes, before compression. Unobserved means not executed in these
-        recordings; unmeasured means no recording is available.
-      </p>
+      <div id="findings" class="findings" hidden>
+        <section id="unused-finding" hidden>
+          <h2>Loaded, but mostly never ran</h2>
+          <ol id="unused-list"></ol>
+        </section>
+        <section id="later-finding" hidden>
+          <h2>Your code that runs only after an action</h2>
+          <ol id="later-list"></ol>
+        </section>
+      </div>
       <section class="panel">
         <div class="controls">
           <input
@@ -345,6 +432,16 @@
             <option value="path">Folders</option>
             <option value="package">Packages</option>
           </select>
+        </div>
+        <details id="options">
+          <summary>More options</summary>
+          <div id="stats" class="stats"></div>
+          <p class="note">
+            Generated UTF-8 bytes, before compression, including files hidden below. Unobserved means not executed in
+            these recordings; unmeasured means no recording is available.
+          </p>
+          <div class="controls">
+          <label><input id="unloaded" type="checkbox" /> Show files not loaded in any recording</label>
           <select id="sort" aria-label="Sort entries">
             <option value="bytes">Largest first</option>
             <option value="unobservedBytes">Most unobserved</option>
@@ -359,7 +456,8 @@
             <option value="initial">Initial comparison</option>
             <option value="changes">Change from baseline</option>
           </select>
-        </div>
+          </div>
+        </details>
         <nav id="breadcrumbs" aria-label="Location"></nav>
         <div class="heading">
           <h2 id="scope"></h2>
@@ -372,10 +470,7 @@
         </div>
         <p id="phase-note" class="note"></p>
         <p id="comparison" class="note"></p>
-        <p class="note">
-          Tile area shows size; colors show coverage. Select a bundle or folder to zoom in. Use the
-          path above to go back.
-        </p>
+        <p class="note">Tile area is size. Select a tile to zoom in; the browser's back button goes up a level.</p>
         <div id="treemap" aria-label="Bundle size treemap"></div>
         <div id="file" hidden></div>
         <p id="empty" hidden>No matching sources in this location.</p>
@@ -396,7 +491,7 @@
         </div>
         <p class="note" id="filter-note"></p>
         <details id="removed" hidden><summary>Removed sources</summary><ul id="removed-list"></ul></details>
-        <details id="actions" hidden open><summary>Review actions · all selected bundles</summary><ul id="action-list"></ul></details>
+        <details id="actions" hidden><summary>Review actions · all selected bundles</summary><ul id="action-list"></ul></details>
       </section>
       <details class="panel">
         <summary id="warnings-title">Analysis details</summary>
@@ -442,6 +537,14 @@
             : (value / (value < 1e6 ? 1e3 : 1e6)).toLocaleString('en-US', {
                 maximumFractionDigits: 1,
               }) + (value < 1e6 ? ' KB' : ' MB')
+        // Display only: drop bundler URL prefixes and pnpm's store directories.
+        const shortPath = (source) =>
+          source
+            .replaceAll('\\', '/')
+            .replace(/^turbopack:\/\/\/\[project\]\//, '')
+            .replace(/^webpack:\/\/[^/]*\//, '')
+            .replace(/^.*\/node_modules\/\.pnpm\/[^/]+\/node_modules\//, 'node_modules/')
+        const loaded = (row) => row.bytes - row.unmeasuredBytes
         const element = (tag, text) => {
           const node = document.createElement(tag)
           if (text !== undefined) node.textContent = text
@@ -484,8 +587,8 @@
               const source = selectedSources.get(original.source) || original
               const parts =
                 $('group').value === 'package'
-                  ? [source.package, source.source]
-                  : source.source.replaceAll('\\', '/').split('/').filter(Boolean)
+                  ? [source.package, shortPath(source.source)]
+                  : shortPath(source.source).split('/').filter(Boolean)
               if ($('group').value === 'path' && parts[0] === '..') {
                 let prefix = ''
                 while (parts[0] === '..') { prefix += '../'; parts.shift() }
@@ -539,6 +642,7 @@
           focus = root
         }
         function filtered(node) {
+          if (node.kind === 'bundle' && report.scenarios.length && !$('unloaded').checked && !loaded(node)) return null
           if (node.kind === 'file')
             return (!$('mapped').checked || node.source !== '[unmapped]') &&
               node.search.includes($('search').value.toLowerCase())
@@ -698,7 +802,7 @@
             label.append(icon, document.createTextNode(text))
             return label
           }))
-          $('phase-note').textContent = phases ? 'First observed in the declared order: ' + report.scenarios.join(' → ') + '. Yellow bytes have missing earlier measurements; their first execution is unknown. This order compares recordings, not wall-clock timestamps.' :
+          $('phase-note').textContent = phases ? 'Color shows the first recording that ran each byte. Yellow: an earlier recording did not load that file, so its first run is unknown.' :
             initialView ? 'Initial: ' + $('initial').value + '. Purple bytes are deferral candidates in scripts measured during initial. Yellow bytes have no initial recording. Execution evidence does not prove loading time or that removal is safe.' :
             $('color').value === 'initial' ? 'Choose an initial scenario to compare execution phases.' : ''
           $('comparison').textContent = changes ? 'Baseline: ' + signed(changes.totals.delta.bytes) + ' generated B · ' + signed(changes.totals.delta.unobservedBytes) + ' unobserved B. Source deltas aggregate all bundles; moved sources keep their identity. Folder colors indicate contained changes.' :
@@ -799,6 +903,89 @@
               ? 'Search and mapped-only filtering affect this view. Overall totals and CI budgets remain unchanged.'
               : 'Every entry is available in the table, including tiles too small for a label.'
         }
+        function finding(list, name, value, detail, share, query) {
+          const item = element('li'), button = element('button'), meter = element('span'), fill = element('i')
+          const title = element('strong', name), amount = element('span', value)
+          amount.className = 'value'
+          meter.className = 'meter'
+          fill.style.width = share === undefined ? '0' : share * 100 + '%'
+          meter.append(fill)
+          button.append(title, amount, ...(share === undefined ? [] : [meter]), element('small', detail))
+          button.onclick = () => {
+            $('search').value = query
+            render()
+            $('treemap').scrollIntoView({block: 'start'})
+          }
+          item.append(button)
+          $(list).append(item)
+        }
+        function renderSummary() {
+          const total = report.totals
+          const loadedBytes = loaded(total)
+          const unloaded = report.bundles.filter((bundle) => !(bundle.bytes - bundle.unmeasuredBytes))
+          if (!report.scenarios.length || !loadedBytes) {
+            $('headline').textContent = size(total.bytes) + ' of JavaScript, with no execution recordings'
+            $('subline').textContent = 'Add coverage recordings to see which code runs.'
+            return
+          }
+          const percent = Math.round((total.unobservedBytes / loadedBytes) * 100)
+          const never = element('mark', size(total.unobservedBytes) + ' (' + percent + '%)')
+          $('headline').replaceChildren(
+            'These recordings loaded ' + size(loadedBytes) + ' of JavaScript. ', never, ' of it never ran.',
+          )
+          $('subline').replaceChildren('Recordings: ' + report.scenarios.join(' → ') + '.')
+          if (unloaded.length) {
+            const toggle = element('button', 'Show them')
+            toggle.className = 'link'
+            toggle.onclick = () => {
+              $('unloaded').checked = true
+              render()
+            }
+            $('subline').append(' ' + unloaded.length + ' other files (' +
+              size(unloaded.reduce((sum, bundle) => sum + bundle.bytes, 0)) +
+              ') were never loaded and are hidden below. ', toggle)
+          }
+          // Packages people can act on: mostly idle once loaded.
+          const packages = new Map()
+          for (const bundle of report.bundles) {
+            for (const source of bundle.sources) {
+              const row = packages.get(source.package) || {name: source.package, bytes: 0, observedBytes: 0, unobservedBytes: 0, unmeasuredBytes: 0}
+              for (const key of keys) row[key] += source[key]
+              packages.set(source.package, row)
+            }
+          }
+          const idle = [...packages.values()]
+            .filter((row) => row.name !== '[unmapped]' && loaded(row) >= 1000 && row.unobservedBytes >= 1000 &&
+              row.observedBytes / loaded(row) < 0.5)
+            .sort((a, b) => b.unobservedBytes - a.unobservedBytes)
+            .slice(0, 6)
+          for (const row of idle) {
+            const ran = row.observedBytes / loaded(row)
+            finding('unused-list', row.name === '[application]' ? 'Your own code' : row.name,
+              Math.round((1 - ran) * 100) + '% never ran',
+              size(loaded(row)) + ' loaded, ' + size(row.observedBytes) + ' ran', ran,
+              row.name === '[application]' ? '' : row.name)
+          }
+          $('unused-finding').hidden = !idle.length
+          // Application sources whose bytes first ran in a later recording.
+          const later = new Map()
+          for (const scenario of report.scenarioReports || []) {
+            for (const row of scenario.interactionCandidates || []) {
+              if (row.package !== '[application]' || !row.interactionOnlyBytes) continue
+              const current = later.get(row.source)
+              if (!current || current.bytes < row.interactionOnlyBytes)
+                later.set(row.source, {scenario: scenario.scenario, bytes: row.interactionOnlyBytes})
+            }
+          }
+          const rows = [...later].sort((a, b) => b[1].bytes - a[1].bytes).slice(0, 6)
+          for (const [source, row] of rows) {
+            const path = shortPath(source)
+            finding('later-list', path.split('/').pop(), size(row.bytes),
+              'Runs only in "' + row.scenario + '": ' + path, undefined, path.split('/').pop())
+          }
+          $('later-finding').hidden = !rows.length
+          $('findings').hidden = !idle.length && !rows.length
+        }
         function renderStats(totals) {
           $('stats').replaceChildren()
           for (const [i, key] of keys.entries()) {
@@ -816,7 +1003,7 @@
         $('actions').querySelector('summary').textContent = 'Review actions · all selected bundles' +
           (report.initialScenario ? ' · initial: ' + report.initialScenario : '')
         for (const action of report.recommendations.slice(0, 20)) {
-          const item = element('li'), button = element('button', action.source)
+          const item = element('li'), button = element('button', shortPath(action.source))
           button.onclick = () => {
             const find = (node) => node.kind === 'file' && node.source === action.source ? node :
               [...node.children.values()].map(find).find(Boolean)
@@ -849,6 +1036,7 @@
         if (report.budgetFailures.length) $('warnings-title').parentElement.open = true
         $('search').oninput = render
         $('mapped').onchange = render
+        $('unloaded').onchange = render
         $('sort').onchange = render
         $('group').onchange = () => {
           build()
@@ -866,6 +1054,7 @@
           cancelAnimationFrame(frame)
           frame = requestAnimationFrame(render)
         })
+        renderSummary()
         build()
         render()
       })()

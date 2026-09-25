@@ -66,6 +66,13 @@ try {
     if (/^https?:/.test(request.url())) requests.push(request.url())
   })
   await page.goto(pathToFileURL(html).href)
+  // Bundles without any recording are hidden until requested, and the summary says so.
+  assert.equal(await page.locator('#rows tr').count(), 1)
+  assert.match(await page.locator('#headline').textContent(), /loaded 80 B of JavaScript\. 40 B \(50%\) of it never ran/)
+  assert.match(await page.locator('#subline').textContent(), /1 other files \(10 B\) were never loaded/)
+  await page.getByRole('button', {name: 'Show them'}).click()
+  await page.locator('#options summary').click()
+  assert(await page.getByLabel('Show files not loaded in any recording').isChecked())
   assert.equal(await page.locator('#rows tr').count(), 2)
   assert.equal(await page.locator('.tile').count(), 2)
   assert.equal(
