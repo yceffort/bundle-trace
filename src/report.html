@@ -260,6 +260,7 @@
         <div class="inspector-tools"><button id="toggle-explorer" aria-pressed="false">Expand code</button><button id="close-inspector" class="quiet" aria-label="Close code inspector">×</button></div>
       </div>
       <details id="source-info"><summary>Full path and verification</summary><code id="full-path"></code><p id="binding"></p></details>
+      <details id="mapping-info" hidden><summary id="mapping-title"></summary><p class="muted">These source-map mappings could not be placed and were skipped. Each region lists the bytes whose attribution may differ; it is a place to inspect, not a proven error. Totals are unchanged.</p><ul id="mapping-list"></ul></details>
       <div class="controls code-controls">
         <div class="tabs" role="group" aria-label="Code view">
           <button id="view-original" aria-pressed="true">Original source</button><button id="view-generated" aria-pressed="false">Generated code</button>
@@ -377,7 +378,12 @@ __COLDPATH_PAYLOADS__
       .sort((a, b) => (order === 'name' ? 0 : b[order] - a[order]) || a.name.localeCompare(b.name));
   }
 
+  const rejectedCount = n => number(n) + ' rejected mapping' + (n === 1 ? '' : 's');
+  const rejected = row => row.mappingDiagnostics?.length ? rejectedCount(row.mappingDiagnostics.length) + ' · ' : '';
   function subtitle(row) {
+    return rejected(row) + context(row);
+  }
+  function context(row) {
     if (state.bundle !== null) {
       if (row.package === '[unmapped]') return 'No source mapping';
       if (row.package !== '[application]') return row.package;
@@ -419,6 +425,7 @@ __COLDPATH_PAYLOADS__
       $('status').value = source.unobservedBytes ? 'unobserved' : 'all';
     }
     $('source-info').open = false;
+    $('mapping-info').open = false;
     $('range-details').open = false;
     render();
     renderCode();
@@ -539,6 +546,8 @@ __COLDPATH_PAYLOADS__
     const request = ++codeRequest;
     $('ranges').replaceChildren();
     $('generated').replaceChildren();
+    $('mapping-list').replaceChildren();
+    $('mapping-info').hidden = true;
     $('original-code').textContent = '—';
     $('range-prev').onclick = null;
     $('range-next').onclick = null;
@@ -624,6 +633,23 @@ __COLDPATH_PAYLOADS__
       }
     };
     more();
+    const diagnostics = source ? (source.mappingDiagnostics || []).map(i => bundle.mappingDiagnostics[i]) : bundle.mappingDiagnostics || [];
+    $('mapping-info').hidden = !diagnostics.length;
+    $('mapping-title').textContent = rejectedCount(diagnostics.length);
+    const at = m => m ? (m.generatedLine + 1) + ':' + (m.generatedColumn + 1) + ' → ' + m.source + (m.original ? ':' + (m.original.line + 1) + ':' + (m.original.column + 1) : '') : 'none on this line';
+    for (const d of diagnostics) {
+      const item = node('li'), region = d.inspectRegion;
+      item.append(node('strong', (d.reason === 'insideSurrogatePair' ? 'Inside a surrogate pair' : 'Column outside its line') + ' · generated ' + at(d)));
+      item.append(node('div', 'Previous: ' + at(d.previous) + ' · Next: ' + at(d.next), 'muted'));
+      item.append(node('div', 'Inspect UTF-8 [' + region.start + ', ' + region.end + '): ' + (d.assignments.map(a => a.source + ' [' + a.start + ', ' + a.end + ')').join(', ') || 'no bytes')));
+      const index = bundle.spans.findIndex(s => s[1] > region.start);
+      if (region.start < region.end && index !== -1) {
+        const button = node('button', 'Show in generated code');
+        button.onclick = () => { state.view = 'generated'; updateView(); focus(spanAt(bundle, index)); };
+        item.append(button);
+      }
+      $('mapping-list').append(item);
+    }
     if (spans.length) focus(spanAt(bundle, spans[0]));
     else {
       $('range-position').textContent = '0 / 0';

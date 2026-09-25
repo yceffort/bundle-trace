@@ -36,6 +36,8 @@ struct HtmlBundle<'a> {
     verification: &'a [crate::input::Verification],
     #[serde(skip_serializing_if = "Option::is_none")]
     loading: &'a Option<crate::annotations::Loading>,
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    mapping_diagnostics: &'a [crate::MappingDiagnostic],
 }
 
 #[derive(Serialize)]
@@ -48,6 +50,8 @@ struct HtmlSource<'a> {
     estimated_compression: &'a Option<crate::ci::CompressedSizes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     label: &'a Option<crate::annotations::SourceLabel>,
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    mapping_diagnostics: &'a [usize],
     #[serde(flatten)]
     counts: &'a crate::Counts,
 }
@@ -128,11 +132,13 @@ pub fn html(report: &Report) -> Result<String> {
                         first_observed: &s.first_observed,
                         estimated_compression: &s.estimated_compression,
                         label: &s.label,
+                        mapping_diagnostics: &s.mapping_diagnostics,
                         counts: &s.counts,
                     })
                     .collect(),
                 verification: &b.verification,
                 loading: &b.loading,
+                mapping_diagnostics: &b.mapping_diagnostics,
             })
             .collect(),
     })?;
@@ -202,11 +208,13 @@ pub fn treemap_with_inspector(report: &Report, include_inspector: bool) -> Resul
                         first_observed: &s.first_observed,
                         estimated_compression: &s.estimated_compression,
                         label: &s.label,
+                        mapping_diagnostics: &s.mapping_diagnostics,
                         counts: &s.counts,
                     })
                     .collect(),
                 verification: &b.verification,
                 loading: &b.loading,
+                mapping_diagnostics: &b.mapping_diagnostics,
             })
             .collect(),
     })?;

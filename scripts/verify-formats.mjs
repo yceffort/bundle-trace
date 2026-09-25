@@ -152,6 +152,31 @@ try {
   assert.equal(await page.locator('#generated').textContent(), hostile)
   assert.deepEqual(errors, [])
   summary.checks.push('HTML source text cannot escape embedded JSON or execute markup')
+
+  const rejectedDir = join(artifacts, 'rejected-mapping')
+  await mkdir(rejectedDir, {recursive: true})
+  await writeFile(join(rejectedDir, 'app.js'), 'abcdef🔥gh')
+  await writeFile(
+    join(rejectedDir, 'app.js.map'),
+    JSON.stringify({version: 3, sources: ['a.js', 'b.js'], names: [], mappings: 'AAAA,OCAA,CAAI'}),
+  )
+  const rejectedHtml = join(artifacts, 'rejected-mapping.html')
+  execFileSync(binary, ['--dir', rejectedDir, '--html', rejectedHtml], {stdio: 'pipe'})
+  await page.goto(pathToFileURL(rejectedHtml).href)
+  assert.match(await page.locator('#rows').textContent(), /1 rejected mapping ·/)
+  await page.getByRole('button', {name: 'app.js', exact: true}).click()
+  await page.getByRole('button', {name: 'a.js', exact: true}).click()
+  await page.waitForFunction(() => document.getElementById('inspector').getAttribute('aria-busy') === 'false')
+  assert(await page.locator('#mapping-info').isVisible())
+  await page.locator('#mapping-title').click()
+  const diagnostic = await page.locator('#mapping-list').textContent()
+  assert.match(diagnostic, /Inside a surrogate pair · generated 1:8 → b\.js:1:1/)
+  assert.match(diagnostic, /Inspect UTF-8 \[0, 10\): a\.js \[0, 10\)/)
+  await page.getByRole('button', {name: 'Show in generated code', exact: true}).click()
+  assert(await page.locator('#generated-view').isVisible())
+  assert.equal(await page.locator('#generated mark.active').textContent(), 'abcdef🔥')
+  assert.deepEqual(errors, [])
+  summary.checks.push('HTML inspector lists rejected mappings per source and focuses their generated region')
   await writeFile(
     join(hostileDir, 'app.js.map'),
     JSON.stringify({
