@@ -23,7 +23,7 @@ pnpm test:browser
 pnpm test:corpus
 ```
 
-Use Node.js 24+ and the pnpm version in `package.json`. The repository root is the published `coldpath` npm package: `bin/` and `lib/` ship, and only `@babel/parser` is a runtime dependency (Playwright is an optional peer). Everything else is development-only. Generated verification files belong in the ignored `artifacts/` directory.
+Use Node.js 24+ and the pnpm version in `package.json`. The repository root is the published `coldpath` npm package: `bin/` and `lib/` ship, and only `@babel/parser` is a runtime dependency (Playwright and `@anthropic-ai/sdk` are optional peers). Everything else is development-only. Generated verification files belong in the ignored `artifacts/` directory.
 
 ## Test boundaries
 
@@ -35,6 +35,7 @@ Use Node.js 24+ and the pnpm version in `package.json`. The repository root is t
 - `scripts/verify-flows.mjs`: one scenario across a CDN script and a link navigation, including code that runs in the click just before unloading; unlisted origins stay blocked, a stale CDN copy is rejected, and the worker started by the second page stays unmeasured.
 - `scripts/verify-treemap.mjs`: checks hierarchical navigation, complete small-file access, area totals, coverage colors/data, search, package grouping, keyboard navigation, offline operation, and mobile layout.
 - `scripts/verify-comparison.mjs`: three ordered scenario colors, missing initial evidence, baseline changes, graph locations, estimates, recommendations, scenario-specific inspection, and mobile/offline behavior.
+- `scripts/verify-inferred.mjs`: `coldpath snapshot` against a local site (load causes, an unreachable declared map), exact per-module bytes from `coldpath modules`, `coldpath label` evidence filtering against mock OpenAI-compatible and Anthropic servers, and the annotated treemap.
 - `tests/workflows.rs`: scenario ordering/Unicode partitions, missing measurements, compression fragments, graph path selection/validation, actionable evidence, and coverage budget failures.
 - `scripts/verify-graphs.mjs`: import declaration versus usage positions, type-only syntax, source snapshot evidence, and malformed Turbopack graph rejection.
 - `scripts/verify-corpus.mjs`: real esbuild, Rollup, Vite, webpack, and Next/Turbopack builds, native Chromium recordings, independent map oracle and known-origin probes, graph location assertions, plus a source-ownership negative control. Rollup, Vite, and webpack graphs come from the `coldpath/rollup`, `coldpath/vite`, and `coldpath/webpack` exports. [Published results and limitations](docs/accuracy-corpus.md).

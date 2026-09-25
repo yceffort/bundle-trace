@@ -136,6 +136,10 @@ In detailed output, `spans[].source` indexes that bundle's `sources` array. `sta
 
 Inspector HTML stores details by chunk and decodes them on demand. Blocks larger than 16 KiB use gzip/base64 and require `DecompressionStream`. Code views render a window around the selected range; data remains complete even when the visible generated snippet is truncated. Both HTML reports work through `file://` and make no external network requests.
 
+### Labels and load causes
+
+`--labels labels.json` attaches descriptions produced by `coldpath label` to `sources[].label` and `bundles[].sources[].label`, and records `labelGenerator`. `--loading loading.json` attaches `bundles[].loading` from `coldpath snapshot`. Labels are a language model's summaries and guesses, never attribution evidence; neither option changes counts or budgets. See [analyzing a site you do not build](third-party.md) for both file formats.
+
 ### Scenarios and execution phases
 
 ```sh
