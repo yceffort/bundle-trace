@@ -18,9 +18,7 @@ const {values} = parseArgs({
 assert(/^[a-z0-9-]+$/.test(values.name))
 const input = resolve(values.dir)
 const captures = await Promise.all(
-  (values.coverage ?? [join(input, 'initial.coverage.json')]).map(async (path) =>
-    JSON.parse(await readFile(path, 'utf8')),
-  ),
+  (values.coverage ?? [join(input, 'initial.coverage.json')]).map(async (path) => JSON.parse(await readFile(path, 'utf8'))),
 )
 const output = join(root, 'artifacts/comparison/inputs', values.name)
 const files = join(output, 'files')
@@ -48,9 +46,7 @@ for (const path of all) {
     .split('\n')
     .at(-1)
     .match(/^\/\/[#@]\s*sourceMappingURL=(.+)$/)?.[1]
-  let mapPath = annotation
-    ? relative(input, resolve(input, dirname(path), annotation))
-    : `${path}.map`
+  let mapPath = annotation ? relative(input, resolve(input, dirname(path), annotation)) : `${path}.map`
   let map
   try {
     map = await readFile(join(input, mapPath))

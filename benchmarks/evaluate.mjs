@@ -12,15 +12,7 @@ const read = async (path) => JSON.parse(await readFile(path, 'utf8'))
 const datasets =
   process.argv.length > 2
     ? process.argv.slice(2)
-    : [
-        'recorded',
-        'recorded-union',
-        'blog-measured',
-        'blog-all',
-        'regex-template',
-        'regex-plain',
-        'regex-control',
-      ]
+    : ['recorded', 'recorded-union', 'blog-measured', 'blog-all', 'regex-template', 'regex-plain', 'regex-control']
 const results = []
 for (const name of datasets) {
   const input = join(base, 'inputs', name)
@@ -57,20 +49,17 @@ for (const name of datasets) {
       totals: rust.totals,
       warnings: rust.warnings.length,
       oracleMatch: true,
-      mappedObservedBytes: rust.sources
-        .filter((row) => row.source !== '[unmapped]')
-        .reduce((n, row) => n + row.observedBytes, 0),
+      mappedObservedBytes: rust.sources.filter((row) => row.source !== '[unmapped]').reduce((n, row) => n + row.observedBytes, 0),
     },
     sourceMapExplorer: {},
     monocart: {},
   }
   const run = async (tool, policy) => {
     const directory = join(output, `${tool}-${policy}`)
-    const child = spawnSync(
-      process.execPath,
-      ['benchmarks/run-tool.mjs', tool, input, directory, 'json', policy],
-      {encoding: 'utf8', env: {...process.env, COMPARISON_DIAGNOSTICS: '1'}},
-    )
+    const child = spawnSync(process.execPath, ['benchmarks/run-tool.mjs', tool, input, directory, 'json', policy], {
+      encoding: 'utf8',
+      env: {...process.env, COMPARISON_DIAGNOSTICS: '1'},
+    })
     await writeFile(join(directory, 'process.log'), child.stdout + child.stderr)
     return {exitCode: child.status, data: await read(join(directory, 'summary.json'))}
   }
@@ -80,16 +69,11 @@ for (const name of datasets) {
       exitCode,
       bundles: data.bundles,
       expectedBundles: data.expectedBundles,
-      fatalErrors: data.errors
-        .filter((row) => !row.isWarning)
-        .map(({code, message}) => ({code, message})),
+      fatalErrors: data.errors.filter((row) => !row.isWarning).map(({code, message}) => ({code, message})),
       warnings: data.errors.filter((row) => row.isWarning).length,
       totalBytes: data.rows.reduce((n, row) => n + row.totalBytes, 0),
       mappedBytes: data.rows.reduce((n, row) => n + row.mappedBytes, 0),
-      mappedCoveredBytes: data.rows.reduce(
-        (n, row) => n + Object.values(row.files).reduce((n, f) => n + (f.coveredSize ?? 0), 0),
-        0,
-      ),
+      mappedCoveredBytes: data.rows.reduce((n, row) => n + Object.values(row.files).reduce((n, f) => n + (f.coveredSize ?? 0), 0), 0),
     }
   }
   for (const policy of ['default', 'generated']) {
@@ -118,7 +102,4 @@ const diagnosis = {
 }
 assert(diagnosis.adjustedRange.fixedStart > diagnosis.adjustedRange.fixedEnd)
 await mkdir('benchmarks/results', {recursive: true})
-await writeFile(
-  'benchmarks/results/correctness.json',
-  JSON.stringify({datasets: results, regression: diagnosis}, null, 2) + '\n',
-)
+await writeFile('benchmarks/results/correctness.json', JSON.stringify({datasets: results, regression: diagnosis}, null, 2) + '\n')

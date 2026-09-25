@@ -39,8 +39,7 @@ if (tool === 'sme') {
     isWarning: !!isWarning,
   }))
   const bundles = result.bundles ?? []
-  if (errors.some((error) => !error.isWarning) || bundles.length !== manifest.bundles.length)
-    process.exitCode = 1
+  if (errors.some((error) => !error.isWarning) || bundles.length !== manifest.bundles.length) process.exitCode = 1
   await writeFile(
     join(output, 'summary.json'),
     JSON.stringify(
@@ -70,8 +69,7 @@ if (tool === 'sme') {
     for (const entry of entries) {
       const path = new URL(entry.url).pathname.slice(1)
       const row = manifest.bundles.find((row) => row.path === path)
-      if (row.mapPath)
-        entry.sourceMap = JSON.parse(await readFile(join(input, 'files', row.mapPath), 'utf8'))
+      if (row.mapPath) entry.sourceMap = JSON.parse(await readFile(join(input, 'files', row.mapPath), 'utf8'))
     }
   const report = new CoverageReport({
     name: 'coldpath comparison',

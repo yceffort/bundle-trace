@@ -10,24 +10,15 @@ import {chromium} from '@playwright/test'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const slashRegex = '/' + String.fromCharCode(92) + '//g'
 const cases = {
-  'regex-template':
-    "const label = `${'a/b'.replace(" +
-    slashRegex +
-    ", '-')}`; globalThis.never = () => { throw Error('never'); };",
-  'regex-plain':
-    "const label = 'a/b'.replace(" +
-    slashRegex +
-    ", '-'); globalThis.never = () => { throw Error('never'); };",
-  'regex-control':
-    "const label = `${'a/b'.replaceAll('/', '-')}`; globalThis.never = () => { throw Error('never'); };",
+  'regex-template': "const label = `${'a/b'.replace(" + slashRegex + ", '-')}`; globalThis.never = () => { throw Error('never'); };",
+  'regex-plain': "const label = 'a/b'.replace(" + slashRegex + ", '-'); globalThis.never = () => { throw Error('never'); };",
+  'regex-control': "const label = `${'a/b'.replaceAll('/', '-')}`; globalThis.never = () => { throw Error('never'); };",
 }
 const hash = (value) => createHash('sha256').update(value).digest('hex')
 let source
 const server = createServer((request, response) => {
   response.setHeader('content-type', request.url === '/app.js' ? 'text/javascript' : 'text/html')
-  response.end(
-    request.url === '/app.js' ? source : '<!doctype html><script src="/app.js"></script>',
-  )
+  response.end(request.url === '/app.js' ? source : '<!doctype html><script src="/app.js"></script>')
 })
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 const browser = await chromium.launch({headless: true})
@@ -72,11 +63,7 @@ try {
       }) + '\n',
     )
     await page.close()
-    execFileSync(
-      process.execPath,
-      [join(root, 'benchmarks/prepare.mjs'), '--dir', dir, '--name', name],
-      {stdio: 'inherit'},
-    )
+    execFileSync(process.execPath, [join(root, 'benchmarks/prepare.mjs'), '--dir', dir, '--name', name], {stdio: 'inherit'})
   }
 } finally {
   await browser.close()
