@@ -1,0 +1,11 @@
+{
+  "url": "http://127.0.0.1:4173/",
+  "dir": "dist",
+  "prefix": "/",
+  "out": "artifacts/coverage",
+  "scenarios": [
+    {"name": "initial"},
+    {"name": "open-report", "actions": "scenarios/open-report.mjs"},
+    {"name": "search", "actions": "scenarios/search.mjs"}
+  ]
+}
