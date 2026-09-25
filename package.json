@@ -28,8 +28,8 @@
     "test:browser": "node scripts/verify.mjs && node scripts/verify-formats.mjs && node scripts/verify-collector.mjs && node scripts/verify-environment.mjs && node scripts/verify-flows.mjs && node scripts/verify-treemap.mjs && node scripts/verify-comparison.mjs && node scripts/verify-inferred.mjs",
     "collect": "node bin/coldpath.mjs collect",
     "test:package": "node scripts/verify-package.mjs",
-    "lint": "oxlint --deny-warnings bin lib scripts && oxfmt --check bin lib scripts",
-    "format": "oxfmt bin lib scripts"
+    "lint": "oxlint --deny-warnings bin lib scripts benchmarks examples/demo && oxfmt --check bin lib scripts benchmarks/*.mjs examples/demo",
+    "format": "oxfmt bin lib scripts benchmarks/*.mjs examples/demo"
   },
   "dependencies": {
     "@babel/parser": "7.29.9"
