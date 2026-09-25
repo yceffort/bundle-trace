@@ -569,10 +569,29 @@
           }
           return {...node, name}
         }
+        // Each zoom is a history entry, so the browser's back button goes up a level.
+        function keyPath(node) {
+          const path = []
+          for (; node.parent; node = node.parent)
+            path.unshift([...node.parent.children].find(([, child]) => child === node)[0])
+          return path
+        }
         function select(node) {
+          if (node === focus) return
           focus = node
+          history.pushState({coldpath: keyPath(node)}, '')
           render()
         }
+        window.addEventListener('popstate', (event) => {
+          let node = root
+          for (const key of event.state?.coldpath || []) {
+            const child = node.children.get(key)
+            if (!child) break
+            node = child
+          }
+          focus = node
+          render()
+        })
         function tooltip(row) {
           return (
             (row.source || row.name) +
