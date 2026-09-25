@@ -17,7 +17,7 @@ const usage = `Usage:
                    [--latency-ms N --download-kbps N --upload-kbps N] [--cpu-slowdown N] [--storage-state FILE]
   coldpath graph --format esbuild|webpack|turbopack --input FILE --root BUILD_ROOT --out graph.json [--environment client|server|all]
   coldpath snapshot --url URL --out DIRECTORY [--wait-ms N] [--actions FILE] [--scenario NAME]
-  coldpath modules --dir DIRECTORY --out MAP_DIRECTORY [--maps-json maps.json]... [--chunks]
+  coldpath modules --dir DIRECTORY --out MAP_DIRECTORY [--maps-json maps.json]... [--chunks] [--graph FILE]
   coldpath label --report report.json --out labels.json [--mode identify|describe] [--provider anthropic|openai]
                  [--model NAME] [--base-url URL] [--top N] [--lang LANGUAGE]
   coldpath analyze [--scenarios coldpath.scenarios.json] [--maps-json maps.json]... [ANALYZER OPTIONS...]
@@ -81,7 +81,7 @@ async function main() {
   }
   if (command === 'modules') {
     const {values} = parseArgs({args: rest, options: {
-      dir: {type: 'string'}, out: {type: 'string'}, 'maps-json': {type: 'string', multiple: true}, chunks: {type: 'boolean'},
+      dir: {type: 'string'}, out: {type: 'string'}, 'maps-json': {type: 'string', multiple: true}, chunks: {type: 'boolean'}, graph: {type: 'string'},
     }})
     await inferModules({...values, mapsJson: values['maps-json']})
     return 0

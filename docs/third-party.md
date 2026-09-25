@@ -57,7 +57,7 @@ Each entry also records the Chrome DevTools Protocol `initiator` type and `start
 
 ## modules
 
-`coldpath modules --dir DIRECTORY --out MAP_DIRECTORY` parses every script with `@babel/parser` and looks for chunk registrations with one function per module:
+`coldpath modules --dir DIRECTORY --out MAP_DIRECTORY [--graph FILE]` parses every script with `@babel/parser` and looks for chunk registrations with one function per module:
 
 - webpack: `(self.webpackChunk<name> = ...).push([[chunk ids], {id: factory}])`, including the array form `[factory, ...]`, and webpack 4's default `(this.webpackJsonp = ...).push(...)`. A renamed webpack 4 `jsonpFunction` is not recognized.
 - Turbopack: `(globalThis.TURBOPACK || (globalThis.TURBOPACK = [])).push([currentScript, id, factory, id, factory, ...])`. Checked against the Next.js version pinned in the accuracy corpus; other Turbopack versions may use another layout.
@@ -65,6 +65,17 @@ Each entry also records the Chrome DevTools Protocol `initiator` type and `start
 For each chunk it writes a source map in which every module's factory body becomes the source `webpack://inferred/<chunk global>/<module id>.js` with that text as `sourcesContent`. The factory header (`id:(e,t,n)=>` or `id:function(e,t,n)`) is left out.
 
 With `--chunks`, a script without recognizable modules (for example Rollup or Vite output) becomes a single source, `webpack://inferred/chunk/<bundle path>`, holding the whole file. That gives `label` something to read; it recovers no boundaries.
+
+With `--graph FILE`, it also writes a dependency graph in the [adapter format](graphs.md#exported-contract-and-evidence-limits), so `--graph` and `--why` work without a bundler export. Pass the file to the analyzer's `--graph`; `--graph-root` does not affect recovered sources. Each edge is a call through a factory's own require binding with a literal module id, located in the recovered source:
+
+| Bundler | Call | Edge kind |
+| --- | --- | --- |
+| webpack | `n(id)` | `unknown` (a static import and a `require()` compile to the same call) |
+| webpack | `n.bind(n, id)`, `n.t.bind(n, id, mode)` | `dynamic` |
+| Turbopack | `e.i(id)` / `e.r(id)` | `static` / `require` |
+| Turbopack | `e.A(id)`, and `t(id)` inside a loader's `e.v(t => ...)` | `dynamic` |
+
+The graph's `bundler` is `recovered` and it carries a warning saying so. Entries are modules that no recovered factory loads, which includes modules loaded only by the runtime or by chunks that were not captured. Self references and ids without a recovered factory are left out and counted in warnings. A nested function that rebinds the require name (for example a browserify bundle inside a module) is skipped, so its ids never become edges; this can also drop real edges in such a function. A module shipped in several chunks becomes one graph module; if its copies differ, its edge locations and source hash are omitted.
 
 `--maps-json` takes existing bindings such as the snapshot's `maps.json`. Scripts bound to a map that has sources are skipped, so a real map is never replaced by a recovered one. Scripts bound to an empty map are treated as unmapped. Chunk wrappers stay unmapped. `maps.json` lists the bindings; pass it after the snapshot's `maps.json` so recovered maps override the empty ones (later `--maps-json` files win).
 

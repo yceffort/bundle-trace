@@ -25,11 +25,17 @@ const modules = {
   12: '(e)=>{e.exports="shared-common-text"}',
   13: '(e)=>{e.exports="shared-common-text"}',
   14: '(e)=>{e.exports="shared-common-text"}',
+  // Never executed; recovered graph edges come from these require calls. The nested functions rebind `n`,
+  // like a browserify bundle inside a module, so their ids are not edges.
+  15: '(e,t,n)=>{n(16);n(15);n.e(3).then(n.bind(n,17));(function(n){n(13)})(0);!function(){var n=function(i){return i};n(14)}()}',
+  16: 'function(e,t,n){\n  n(17);n(99)\n}',
+  17: '(e,t,n)=>{e.exports=1}',
 }
 const chunk = `(self.webpackChunk_test=self.webpackChunk_test||[]).push([[1],{${Object.entries(modules).map(([id, code]) => `${id}:${code}`).join(',')}}]);
 (function(){var m=self.webpackChunk_test[0][1],x={};m[10](x);var s=document.createElement("script");s.src="/a/"+"dy"+"n.js";document.head.append(s)})()
 //# sourceMappingURL=chunk.js.map`
-const turbo = '(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,20,e=>{e.x="turbo-sentinel"},"21",function(e){\n  e.y=1\n}]);'
+const turbo = '(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,20,e=>{e.x="turbo-sentinel"},"21",function(e){\n  e.y=1\n},' +
+  '22,e=>{e.i(20);e.A(23)},23,e=>{e.v(t=>Promise.all([]).then(()=>t(21)))}]);'
 // Scope-hoisted like Rollup/Vite output: no module registrations, so only a whole-chunk source is possible.
 const vite = 'function a(){return "vite-sentinel-a"}\nfunction b(){return "vite-other-b"}\nwindow.v=a()'
 const mapped = 'window.mapped=1\n//# sourceMappingURL=mapped.js.map'
@@ -96,7 +102,21 @@ try {
     {[`${host}/a/chunk.js`]: `maps/${host}/a/chunk.js.map`, [`${host}/a/mapped.js`]: `files/${host}/a/mapped.js.map`})
   assert.equal(await readFile(join(out, 'files', host, 'a', 'chunk.js'), 'utf8'), chunk)
 
-  await cli('modules', '--dir', join(out, 'files'), '--out', join(out, 'modules'), '--maps-json', join(out, 'maps.json'), '--chunks')
+  await cli('modules', '--dir', join(out, 'files'), '--out', join(out, 'modules'), '--maps-json', join(out, 'maps.json'), '--chunks',
+    '--graph', join(out, 'modules', 'graph.json'))
+  const graph = JSON.parse(await readFile(join(out, 'modules', 'graph.json'), 'utf8'))
+  assert.equal(graph.bundler, 'recovered')
+  assert.match(graph.warnings.join(' '), /not exported by a bundler/)
+  assert.deepEqual(graph.edges.map(({from, to, kind, location}) => [from, to, kind, location]).sort(), [
+    ['TURBOPACK/22', 'TURBOPACK/20', 'static', {line: 1, column: 2}],
+    ['TURBOPACK/22', 'TURBOPACK/23', 'dynamic', {line: 1, column: 10}],
+    ['TURBOPACK/23', 'TURBOPACK/21', 'dynamic', {line: 1, column: 34}],
+    ['webpackChunk_test/15', 'webpackChunk_test/16', 'unknown', {line: 1, column: 2}],
+    ['webpackChunk_test/15', 'webpackChunk_test/17', 'dynamic', {line: 1, column: 26}],
+    ['webpackChunk_test/16', 'webpackChunk_test/17', 'unknown', {line: 2, column: 3}],
+  ].sort(), 'require calls become edges; self references, rebound names and unknown ids do not')
+  assert.deepEqual(graph.modules.filter((m) => !m.entry).map((m) => m.id).sort(),
+    ['TURBOPACK/20', 'TURBOPACK/21', 'TURBOPACK/23', 'webpackChunk_test/16', 'webpackChunk_test/17'])
   const recovered = JSON.parse(await readFile(join(out, 'modules', 'maps.json'), 'utf8'))
   assert(!recovered[`${host}/a/mapped.js`], 'a script with a real map is left alone')
   assert(recovered[`${host}/a/vite.js`] && recovered[`${host}/a/chunk.js`])
@@ -119,6 +139,9 @@ try {
   assert.equal(byId(11).observedBytes, 0, 'module 11 factory never ran')
   assert.equal(bundle.sources.reduce((sum, row) => sum + row.bytes, 0), bundle.bytes)
   assert.equal(bundle.bytes, Buffer.byteLength(chunk), 'bundle totals keep the header bytes, under [unmapped]')
+  const why = await analyze('--graph', join(out, 'modules', 'graph.json'), '--why', 'webpack://inferred/webpackChunk_test/16.js')
+  assert.match(why.stdout + why.stderr, /Import path \(recovered graph\): webpackChunk_test\/15\.js -> webpackChunk_test\/16\.js\n\s+webpackChunk_test\/15\.js:1:2 --Unknown--> webpackChunk_test\/16\.js/)
+  assert.match(why.stderr, /Graph source snapshots: 12 matched sourcesContent/)
   const turbopack = report.bundles.find((row) => row.path === `${host}/a/turbo.js`)
   for (const [id, text] of [['20', '{e.x="turbo-sentinel"}'], ['21', '{\n  e.y=1\n}']]) {
     const row = turbopack.sources.find((source) => source.source === `webpack://inferred/TURBOPACK/${id}.js`)

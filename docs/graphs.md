@@ -1,6 +1,6 @@
 # Bundler graph adapters
 
-Graph export is optional and uses the `coldpath` package (`coldpath graph` and the bundler plugins). The Rust analyzer consumes the exported JSON offline. Source maps alone cannot recover dependency edges or import locations.
+Graph export is optional and uses the `coldpath` package (`coldpath graph` and the bundler plugins). The Rust analyzer consumes the exported JSON offline. Source maps alone cannot recover dependency edges or import locations. For map-less webpack and Turbopack chunks you did not build, `coldpath modules --graph` recovers a graph from the minified factories instead (see [third-party.md](third-party.md#modules)).
 
 ```sh
 coldpath --dir dist --graph artifacts/graph.json --graph-root . \
