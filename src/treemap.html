@@ -566,6 +566,14 @@
       .callout p {
         margin: 2px 0 0;
       }
+      /* AI-inferred identity: dashed to set it apart from measured evidence. */
+      .callout.inferred {
+        border-left-style: dashed;
+        border-left-color: var(--muted);
+      }
+      .callout code {
+        word-break: break-all;
+      }
       .chain {
         margin: 0;
         padding-left: 22px;
@@ -823,6 +831,12 @@
           children: new Map(),
           ...Object.fromEntries(sumKeys.map((key) => [key, 0])),
         })
+        // Present only with --loading. Groups are ordered from earliest to latest cause.
+        const loadGroups = {html: 'Initial HTML tags', inline: 'Named in initial HTML data', dynamic: 'Loaded by scripts'}
+        const grouped = report.bundles.some((bundle) => bundle.loading)
+        const loadText = (loading) => loading ? loadGroups[loading.load] +
+          (loading.initiator ? ' (initiator: ' + loading.initiator + ')' : '') +
+          (loading.startMs !== undefined ? ', requested at ' + number(loading.startMs) + ' ms' : '') : ''
         let root, focus, changes, sourceChanges, bundleChanges
         function build() {
           const selected = scenarioReports.get($('scenario').value)
@@ -836,9 +850,16 @@
           bundleChanges = new Map((changes?.bundles || []).map((row) => [row.name, row]))
           root = make('All bundles', null, 'root')
           for (const [bundleIndex, bundle] of report.bundles.entries()) {
-            const node = make(bundle.path, root, 'bundle')
+            let parent = root
+            if (grouped) {
+              const key = 'load:' + (bundle.loading?.load || 'unknown')
+              if (!root.children.has(key)) root.children.set(key, make(loadGroups[bundle.loading?.load] || 'Load cause unknown', root, 'folder'))
+              parent = root.children.get(key)
+            }
+            const node = make(bundle.path, parent, 'bundle')
             node.change = bundleChanges.get(bundle.path)
-            root.children.set(bundle.path, node)
+            node.loading = bundle.loading
+            parent.children.set(bundle.path, node)
             const selectedSources = new Map((selectedBundles.get(bundle.path)?.sources || []).map((s) => [s.source, s]))
             const initialSources = new Map((initialBundles.get(bundle.path)?.sources || []).map((s) => [s.source, s]))
             for (const [sourceIndex, original] of bundle.sources.entries()) {
@@ -858,9 +879,10 @@
                 const leaf = i === parts.length - 1,
                   key = (leaf ? 'file:' : 'folder:') + parts[i]
                 if (!parent.children.has(key))
-                  parent.children.set(key, make(parts[i], parent, leaf ? 'file' : 'folder'))
+                  parent.children.set(key, make(leaf && original.label?.shortName ? '≈ ' + original.label.shortName + ' (' + parts[i] + ')' : parts[i], parent, leaf ? 'file' : 'folder'))
                 parent = parent.children.get(key)
               }
+              parent.label = original.label
               parent.source = source.source
               parent.package = source.package
               parent.bundleIndex = bundleIndex
@@ -885,7 +907,9 @@
                 ' ' +
                 source.package +
                 ' ' +
-                bundle.path
+                bundle.path +
+                ' ' +
+                [original.label?.name, original.label?.shortName, original.label?.summary].filter(Boolean).join(' ')
               ).toLowerCase()
               add(parent, source)
             }
@@ -958,6 +982,8 @@
           return (
             (row.source || row.name) +
             '\n' +
+            (row.label?.name ? 'Inferred (AI guess): ' + row.label.name + '\n' : '') +
+            (row.loading ? 'Loaded: ' + loadText(row.loading) + '\n' : '') +
             keys
               .map(
                 (key, i) =>
@@ -1130,11 +1156,35 @@
               fact('Ran later, initial unmeasured', number(view.initialUnknown) + ' B', 'var(--unknown-initial)')
             }
             fact('Never ran', number(view.unobservedBytes) + ' B', 'var(--unobserved)')
+            let bundleNode = focus
+            while (bundleNode && bundleNode.kind !== 'bundle') bundleNode = bundleNode.parent
+            if (bundleNode?.loading) fact('Bundle loaded', loadText(bundleNode.loading))
             $('file').replaceChildren(path, facts)
             const note = (text) => {
               const paragraph = element('p', text)
               paragraph.className = 'note'
               $('file').append(paragraph)
+            }
+            const label = focus.label
+            if (label) {
+              const generator = report.labelGenerator
+              const by = generator ? ' by ' + [generator.provider, generator.model].filter(Boolean).join(' ') : ''
+              $('file').append(element('h3', 'What it is'))
+              if (label.summary) $('file').append(element('p', label.summary))
+              if (label.name) {
+                const callout = element('div')
+                callout.className = 'callout inferred'
+                callout.append(element('strong', 'Inferred identity: ' + label.name + (label.kind ? ' (' + label.kind + ')' : '')))
+                if (label.reasoning) callout.append(element('p', label.reasoning))
+                if (label.evidence?.length) {
+                  const list = element('p')
+                  list.append('Evidence found in this source: ')
+                  label.evidence.forEach((text, i) => list.append(...(i ? [' '] : []), element('code', text)))
+                  callout.append(list)
+                }
+                $('file').append(callout)
+              }
+              note('Generated' + by + '. A language model guessed this from the code; it is not source-map evidence and can be wrong.')
             }
             if (focus.estimatedCompression) note('Estimated isolated source size: gzip ' + size(focus.estimatedCompression.gzipBytes) +
               ', Brotli ' + size(focus.estimatedCompression.brotliBytes) + '. Attributed fragments compressed in isolation; not measured transfer savings.')
