@@ -27,3 +27,4 @@ Each real build has an initially executed source, a statically imported chart ac
 The graph checks require the actual fixture's chart import line (entry line 2 / Next page line 4), and its dynamic search import line (entry line 7 / Next page line 12). webpack module concatenation remains enabled. A negative control relabels `startup.js` while preserving all byte totals; both source-map and known-origin checks must detect it. This ensures byte conservation alone cannot make the corpus pass.
 
 Generated build files, native captures, JSON reports, graphs, interactive HTML, and fresh metrics stay in `artifacts/accuracy-corpus/`. Only source fixtures, explicit probe-error budgets, and this measured snapshot are versioned. CPU cost, network loading times, all possible bundler options, and arbitrary third-party map quality are outside the measured claims.
+
