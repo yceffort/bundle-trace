@@ -795,7 +795,7 @@
             .replaceAll('\\', '/')
             .replace(/^turbopack:\/\/\/\[project\]\//, '')
             .replace(/^webpack:\/\/[^/]*\//, '')
-            .replace(/^.*\/node_modules\/\.pnpm\/[^/]+\/node_modules\//, 'node_modules/')
+            .replace(/^(?:.*\/)?node_modules\/\.pnpm\/[^/]+\/node_modules\//, 'node_modules/')
         const loaded = (row) => row.bytes - row.unmeasuredBytes
         const element = (tag, text) => {
           const node = document.createElement(tag)
