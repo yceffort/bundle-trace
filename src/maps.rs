@@ -48,6 +48,8 @@ pub(crate) struct LoadedMap {
     pub data: Vec<u8>,
     /// Directory for resolving sources, including for inline maps.
     pub directory: PathBuf,
+    /// The map file read, if the map is not inline.
+    pub path: Option<PathBuf>,
 }
 
 pub(crate) fn load_with_location(
@@ -61,6 +63,7 @@ pub(crate) fn load_with_location(
             data: fs::read(path)
                 .with_context(|| format!("read explicit map {}", path.display()))?,
             directory: fs::canonicalize(path)?.parent().unwrap().to_path_buf(),
+            path: Some(fs::canonicalize(path)?),
         }));
     }
     if let Some(reference) = annotation(content).and_then(|s| s.strip_prefix("data:")) {
@@ -87,6 +90,7 @@ pub(crate) fn load_with_location(
                 payload
             },
             directory: fs::canonicalize(file)?.parent().unwrap().to_path_buf(),
+            path: None,
         }));
     }
     locate(file, content, root)?
@@ -94,6 +98,7 @@ pub(crate) fn load_with_location(
             Ok(LoadedMap {
                 data: fs::read(&path)?,
                 directory: path.parent().unwrap().to_path_buf(),
+                path: Some(path),
             })
         })
         .transpose()

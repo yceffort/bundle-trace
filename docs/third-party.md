@@ -45,7 +45,7 @@ coldpath analyze --dir artifacts/site/files --url-prefix https:// \
   --initial-scenario initial.json --scenario-order initial.json,search.json ...
 ```
 
-Unlike `collect`, `snapshot` does not block cross-origin requests and has no local build to check against: the saved text is the only evidence of what ran. Keep the snapshot directory together; a later visit may serve different files.
+Unlike `collect`, `snapshot` does not block cross-origin requests and has no local build to check against: the saved text is the only evidence of what ran. Keep the snapshot directory together; a later visit may serve different files. To hand an analysis to someone else, add `--export DIRECTORY` to the analyze command (see [evidence export and replay](usage.md#evidence-export-and-replay)).
 
 ### Load causes
 

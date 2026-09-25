@@ -16,6 +16,9 @@ pub struct InputOptions {
     pub url_prefixes: Vec<String>,
     pub script_paths: BTreeMap<String, String>,
     pub allow_unverified: bool,
+    /// Directory that `file://` coverage URLs are relative to, when the analysis root
+    /// has moved since capture (evidence replay). Defaults to the analysis root.
+    pub file_url_root: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -156,7 +159,10 @@ fn local_path(url: &str, root: &Path, options: &InputOptions) -> Result<Option<S
                 .decode_utf8()?
                 .as_ref(),
         );
-        let root = fs::canonicalize(root)?;
+        let root = match &options.file_url_root {
+            Some(root) => root.clone(),
+            None => fs::canonicalize(root)?,
+        };
         if let Ok(relative) = path.strip_prefix(root) {
             let relative = relative.to_string_lossy().replace('\\', "/");
             coverage::validate_path(&relative)?;

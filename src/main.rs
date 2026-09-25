@@ -1,17 +1,19 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 
-#[derive(Parser)]
+#[derive(Parser, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[command(
     version,
     about = "Trace generated JavaScript bytes to sources; import V8/DevTools coverage and export offline reports"
 )]
 struct Args {
     /// Analysis root; recursively scan JS files when no files/globs are supplied.
-    #[arg(long, required_unless_present = "inputs")]
+    #[arg(long, required_unless_present_any = ["inputs", "replay"])]
     dir: Option<PathBuf>,
     /// JavaScript files/globs relative to CWD; optionally an explicit .map after one file.
     #[arg(value_name = "FILE_OR_GLOB")]
@@ -111,11 +113,202 @@ struct Args {
     why: Option<String>,
     #[arg(long, default_value_t = 20)]
     limit: usize,
+    /// Also copy every input this analysis read, with a manifest, into a new directory.
+    #[arg(long, conflicts_with = "replay")]
+    #[serde(skip)]
+    export: Option<PathBuf>,
+    /// Re-run an --export directory offline and compare with its recorded results.
+    #[arg(long)]
+    #[serde(skip)]
+    replay: Option<PathBuf>,
+    /// Directory that file:// coverage URLs were relative to at capture (set by --export).
+    #[arg(long, hide = true)]
+    file_url_root: Option<PathBuf>,
+}
+
+impl Args {
+    /// Options that shape the analysis, without outputs or comparisons.
+    fn analysis(&self) -> Result<serde_json::Value> {
+        let mut args = self.clone();
+        (args.json, args.html, args.treemap, args.tsv, args.markdown) =
+            (None, None, None, None, None);
+        (
+            args.baseline,
+            args.max_added_bytes,
+            args.max_added_unobserved_bytes,
+        ) = (None, None, None);
+        (args.details, args.why, args.limit) = (false, None, 20);
+        Ok(serde_json::to_value(args)?)
+    }
+
+    fn for_each_path(&mut self, mut f: impl FnMut(&Path) -> Result<PathBuf>) -> Result<()> {
+        let mut apply = |path: &mut Option<PathBuf>| -> Result<()> {
+            if let Some(value) = path {
+                *value = f(value)?;
+            }
+            Ok(())
+        };
+        for path in [
+            &mut self.dir,
+            &mut self.metafile,
+            &mut self.metafile_root,
+            &mut self.graph,
+            &mut self.graph_root,
+            &mut self.script_map,
+            &mut self.config,
+            &mut self.labels,
+            &mut self.loading,
+        ] {
+            apply(path)?;
+        }
+        for path in &mut self.coverage {
+            *path = f(path)?;
+        }
+        for input in &mut self.inputs {
+            *input = f(Path::new(input))?.to_string_lossy().into_owned();
+        }
+        for binding in &mut self.maps {
+            let (bundle, map) = binding
+                .split_once('=')
+                .context("--map must be bundle-relative-path=map-file")?;
+            *binding = format!("{bundle}={}", f(Path::new(map))?.display());
+        }
+        Ok(())
+    }
+}
+
+/// Recorded analysis options with paths resolved inside the evidence directory,
+/// plus the output options given on the command line.
+fn replay_args(cli: &Args, dir: &Path) -> Result<(Args, coldpath::evidence::Manifest)> {
+    let bare = Args::parse_from(["coldpath", "--replay", "."]);
+    ensure!(
+        cli.analysis()? == bare.analysis()?,
+        "--replay takes only output options (--json, --html, --treemap, --tsv, --markdown, --details, --limit)"
+    );
+    let manifest = coldpath::evidence::open(dir)?;
+    let mut args: Args = serde_json::from_value(manifest.invocation.clone())
+        .context("invalid evidence invocation")?;
+    args.for_each_path(|path| {
+        ensure!(
+            path.components().all(|c| matches!(c, Component::Normal(_))),
+            "unsafe evidence path {}",
+            path.display()
+        );
+        Ok(dir.join(path))
+    })?;
+    (args.json, args.html, args.treemap, args.tsv, args.markdown) = (
+        cli.json.clone(),
+        cli.html.clone(),
+        cli.treemap.clone(),
+        cli.tsv.clone(),
+        cli.markdown.clone(),
+    );
+    (args.details, args.limit, args.replay) = (cli.details, cli.limit, cli.replay.clone());
+    Ok((args, manifest))
+}
+
+/// Copy what the analysis read, rewriting paths to evidence-relative ones.
+fn export(
+    out: &Path,
+    args: &Args,
+    root: &Path,
+    selection: Option<&coldpath::selection::Selection>,
+    report: &coldpath::Report,
+) -> Result<()> {
+    let canonical =
+        |path: &Path| fs::canonicalize(path).with_context(|| format!("resolve {}", path.display()));
+    let root = canonical(root)?;
+    let cwd = std::env::current_dir()?;
+    let graph_root = args
+        .graph
+        .as_ref()
+        .map(|_| canonical(args.graph_root.as_deref().unwrap_or(&cwd)))
+        .transpose()?;
+    let metafile_root = args
+        .metafile
+        .as_ref()
+        .map(|_| canonical(args.metafile_root.as_deref().unwrap_or(&cwd)))
+        .transpose()?;
+    let read = report
+        .read_files
+        .iter()
+        .map(|path| canonical(path))
+        .collect::<Result<Vec<_>>>()?;
+    let located = [&root]
+        .into_iter()
+        .chain(&read)
+        .chain(&graph_root)
+        .chain(&metafile_root)
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut writer = coldpath::evidence::Writer::new(out, &located)?;
+    for path in &read {
+        writer.tree_file(path, "located")?;
+    }
+    let mut inv = args.clone();
+    inv.file_url_root = Some(args.file_url_root.clone().unwrap_or(root.clone()));
+    inv.dir = Some(writer.tree_dir(&root)?.into());
+    inv.graph_root = graph_root
+        .map(|p| writer.tree_dir(&p))
+        .transpose()?
+        .map(Into::into);
+    inv.metafile_root = metafile_root
+        .map(|p| writer.tree_dir(&p))
+        .transpose()?
+        .map(Into::into);
+    // Positional globs become the literal files they selected.
+    inv.inputs = match selection {
+        Some(selection) => selection
+            .files
+            .iter()
+            .map(|file| root.join(file))
+            .chain(selection.maps.values().cloned())
+            .map(|path| writer.tree_file(&canonical(&path)?, "located"))
+            .collect::<Result<_>>()?,
+        None => Vec::new(),
+    };
+    inv.maps = args
+        .maps
+        .iter()
+        .map(|binding| {
+            let (bundle, map) = binding.split_once('=').unwrap();
+            Ok(format!(
+                "{bundle}={}",
+                writer.tree_file(&canonical(Path::new(map))?, "map")?
+            ))
+        })
+        .collect::<Result<_>>()?;
+    inv.coverage = args
+        .coverage
+        .iter()
+        .map(|path| writer.input(path, "coverage").map(Into::into))
+        .collect::<Result<_>>()?;
+    for (path, role) in [
+        (&mut inv.script_map, "script-map"),
+        (&mut inv.config, "config"),
+        (&mut inv.metafile, "metafile"),
+        (&mut inv.graph, "graph"),
+        (&mut inv.labels, "labels"),
+        (&mut inv.loading, "loading"),
+    ] {
+        if let Some(value) = path {
+            *value = writer.input(value, role)?.into();
+        }
+    }
+    writer.finish(inv.analysis()?, report)
 }
 
 fn main() -> Result<()> {
     let mut args = Args::parse();
-    let default_treemap = !args.inputs.is_empty()
+    let replay = if let Some(dir) = args.replay.clone() {
+        let (replayed, manifest) = replay_args(&args, &dir)?;
+        args = replayed;
+        Some(manifest)
+    } else {
+        None
+    };
+    let default_treemap = replay.is_none()
+        && !args.inputs.is_empty()
         && args.json.is_none()
         && args.html.is_none()
         && args.treemap.is_none()
@@ -150,7 +343,7 @@ fn main() -> Result<()> {
     let dir = selection
         .as_ref()
         .map(|s| s.root.clone())
-        .or(args.dir)
+        .or(args.dir.clone())
         .unwrap();
     let mut config: coldpath::ci::Config = if let Some(path) = &args.config {
         serde_json::from_slice(&fs::read(path)?).context("invalid --config")?
@@ -158,24 +351,27 @@ fn main() -> Result<()> {
         Default::default()
     };
     let mut options = coldpath::AnalyzeOptions {
-        initial_scenario: args.initial_scenario,
-        scenario_order: args.scenario_order,
+        initial_scenario: args.initial_scenario.clone(),
+        scenario_order: args.scenario_order.clone(),
         source_compression: args.source_compression,
         include: config.include,
         exclude: config.exclude,
         // Retain sourcesContent temporarily to verify graph source snapshots and label evidence.
+        // Evidence compares span boundaries, which only detailed analysis retains.
         details: args.details
+            || args.export.is_some()
+            || replay.is_some()
             || args.html.is_some()
             || args.graph.is_some()
             || args.labels.is_some(),
         ..Default::default()
     };
-    if let Some(selection) = selection {
-        options.files = Some(selection.files);
-        options.maps = selection.maps;
+    if let Some(selection) = &selection {
+        options.files = Some(selection.files.clone());
+        options.maps = selection.maps.clone();
     }
-    options.include.extend(args.include);
-    options.exclude.extend(args.exclude);
+    options.include.extend(args.include.iter().cloned());
+    options.exclude.extend(args.exclude.iter().cloned());
     options.compression = config.compression
         || args.compression
         || config.budgets.max_gzip_bytes.is_some()
@@ -187,13 +383,14 @@ fn main() -> Result<()> {
     config.budgets.max_unmeasured_bytes = args
         .max_unmeasured_bytes
         .or(config.budgets.max_unmeasured_bytes);
-    options.input.url_prefixes = args.url_prefix;
+    options.input.url_prefixes = args.url_prefix.clone();
     options.input.allow_unverified = args.allow_unverified;
-    if let Some(path) = args.script_map {
+    options.input.file_url_root = args.file_url_root.clone();
+    if let Some(path) = &args.script_map {
         options.input.script_paths = serde_json::from_slice(&fs::read(path)?)
             .context("--script-map must be an object mapping URLs to relative paths")?;
     }
-    for binding in args.maps {
+    for binding in &args.maps {
         let (bundle, map) = binding
             .split_once('=')
             .context("--map must be bundle-relative-path=map-file")?;
@@ -204,8 +401,8 @@ fn main() -> Result<()> {
         );
     }
     let mut report = coldpath::analyze_with_options(&dir, &args.coverage, &options)?;
-    if let Some(path) = args.baseline {
-        let comparison = coldpath::baseline::compare(&report, &fs::read(&path)?)
+    if let Some(path) = &args.baseline {
+        let comparison = coldpath::baseline::compare(&report, &fs::read(path)?)
             .with_context(|| format!("compare baseline {}", path.display()))?;
         report.warnings.extend(comparison.warnings.iter().cloned());
         report.baseline = Some(comparison);
@@ -241,30 +438,68 @@ fn main() -> Result<()> {
             comparison.totals.delta.bytes
         ));
     }
-    if let Some(path) = args.metafile {
+    if let Some(path) = &args.metafile {
         let mut paths = coldpath::metadata::import_paths(&fs::read(path)?)?;
         coldpath::metadata::bind_sources(
             &mut paths,
             &dir,
-            &args.metafile_root.unwrap_or(std::env::current_dir()?),
+            &args
+                .metafile_root
+                .clone()
+                .unwrap_or(std::env::current_dir()?),
         )?;
         report.import_paths = Some(paths);
     }
-    if let Some(path) = args.graph {
+    if let Some(path) = &args.graph {
         coldpath::graph::attach(
             &mut report,
             &fs::read(path)?,
             &dir,
-            &args.graph_root.unwrap_or(std::env::current_dir()?),
+            &args.graph_root.clone().unwrap_or(std::env::current_dir()?),
         )?;
     }
-    if let Some(path) = args.labels {
+    if let Some(path) = &args.labels {
         coldpath::annotations::attach_labels(&mut report, &fs::read(path)?)?;
     }
-    if let Some(path) = args.loading {
+    if let Some(path) = &args.loading {
         coldpath::annotations::attach_loading(&mut report, &fs::read(path)?)?;
     }
     report.recommendations = coldpath::recommendations::build(&report);
+    if let Some(out) = &args.export {
+        export(out, &args, &dir, selection.as_ref(), &report)
+            .with_context(|| format!("export evidence to {}", out.display()))?;
+        status!("Wrote evidence {}", out.display());
+    }
+    let replay_exit = if let Some(manifest) = &replay {
+        let differences = manifest
+            .expected
+            .differences(&coldpath::evidence::Expected::from_report(&report)?);
+        for difference in &differences {
+            eprintln!("replay differs: {difference}");
+        }
+        let current = coldpath::evidence::Analyzer::current();
+        if manifest.analyzer != current {
+            eprintln!(
+                "replay used analyzer {} ({}); the evidence was recorded with {} ({}). Run that version to reproduce it exactly.",
+                current.version,
+                current.commit.as_deref().unwrap_or("unknown commit"),
+                manifest.analyzer.version,
+                manifest
+                    .analyzer
+                    .commit
+                    .as_deref()
+                    .unwrap_or("unknown commit"),
+            );
+            Some(3)
+        } else if differences.is_empty() {
+            status!("Replay reproduced every recorded result.");
+            None
+        } else {
+            Some(1)
+        }
+    } else {
+        None
+    };
     ensure!(
         args.why.is_none() || report.import_paths.is_some(),
         "--why requires --graph or --metafile"
@@ -343,13 +578,13 @@ fn main() -> Result<()> {
             row.package
         );
     }
-    if let Some(source) = args.why {
+    if let Some(source) = &args.why {
         let row = report
             .import_paths
             .as_ref()
             .unwrap()
             .iter()
-            .find(|row| row.source == source || row.resolved_source.as_ref() == Some(&source))
+            .find(|row| row.source == *source || row.resolved_source.as_ref() == Some(source))
             .ok_or_else(|| anyhow::anyhow!("no matched graph input {source}"))?;
         status!(
             "\nImport path ({} graph): {}",
@@ -401,7 +636,10 @@ fn main() -> Result<()> {
     if let Some(path) = args.markdown {
         write_report(path, coldpath::ci::markdown(&report))?;
     }
-    if !report.budget_failures.is_empty() {
+    if let Some(code) = replay_exit {
+        std::process::exit(code);
+    }
+    if replay.is_none() && !report.budget_failures.is_empty() {
         for failure in &report.budget_failures {
             eprintln!("budget failed: {failure}");
         }

@@ -20,7 +20,8 @@ const usage = `Usage:
   coldpath modules --dir DIRECTORY --out MAP_DIRECTORY [--maps-json maps.json]... [--chunks] [--graph FILE]
   coldpath label --report report.json --out labels.json [--mode identify|describe] [--provider anthropic|openai]
                  [--model NAME] [--base-url URL] [--top N] [--lang LANGUAGE]
-  coldpath analyze [--scenarios coldpath.scenarios.json] [--maps-json maps.json]... [ANALYZER OPTIONS...]
+  coldpath analyze [--scenarios coldpath.scenarios.json] [--maps-json maps.json]... [ANALYZER OPTIONS...] [--export DIRECTORY]
+  coldpath --replay DIRECTORY [--json FILE] [--html FILE]
   coldpath [ANALYZER OPTIONS...]
 
 Run \`coldpath analyze --help\` for analyzer options. See docs/collecting.md, docs/graphs.md and docs/third-party.md.`

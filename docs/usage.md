@@ -136,6 +136,25 @@ In detailed output, `spans[].source` indexes that bundle's `sources` array. `sta
 
 Inspector HTML stores details by chunk and decodes them on demand. Blocks larger than 16 KiB use gzip/base64 and require `DecompressionStream`. Code views render a window around the selected range; data remains complete even when the visible generated snippet is truncated. Both HTML reports work through `file://` and make no external network requests.
 
+### Evidence export and replay
+
+`--export DIRECTORY` writes a portable copy of one analysis next to its normal outputs. The directory must be new or empty. It holds the raw coverage recordings, every bundle the analysis read (including ones excluded by filters), the maps it used, the graph, metafile, label, loading, script-map, and config files it was given, any source file the graph check read from disk, and `manifest.json`.
+
+```sh
+coldpath analyze --dir artifacts/site/files --url-prefix https:// \
+  --coverage artifacts/site/coverage/initial.json --maps-json artifacts/site/maps.json \
+  --loading artifacts/site/loading.json --export evidence/site-2026-09-25
+coldpath --replay evidence/site-2026-09-25 --json replay.json
+```
+
+Files are copied byte for byte, so V8 function counts, URLs, and `sourcesContent` are unchanged, and verification is recomputed from the same inputs (an `unverified` recording stays unverified). Bundles, maps, and the graph and metafile roots keep their positions relative to each other under `tree/`, because map source paths resolve against those locations. Other inputs go under `inputs/N/` with their file names kept (a raw recording's file name is its scenario name). `file://` coverage URLs keep matching through the recorded original root.
+
+`manifest.json` records the analyzer version and the git commit it was built from (suffixed `-dirty` when the build had uncommitted changes; absent outside a git checkout), the analysis options with evidence-relative paths, the SHA-256 and role of every file, and the expected results: scenario order, totals, per-scenario totals, excluded bundles, and per-bundle hashes, verification, counts, and digests of every span boundary overall and per scenario. Outputs, `--baseline`, and `--why` are not part of the evidence.
+
+`--replay DIRECTORY` needs no network, original workspace, or labeling model. It accepts only output options (`--json`, `--html`, `--treemap`, `--tsv`, `--markdown`, `--details`, `--limit`). It fails before analysis when a listed file is missing or its SHA-256 differs. Otherwise it re-runs the recorded analysis, writes the requested outputs, and compares results. Exit codes: `0` reproduced every result with the same analyzer; `1` inputs rejected or results differ; `3` the current analyzer differs from the recorded one (differences, if any, are still printed; install the recorded version to reproduce exactly). Budgets do not affect the replay exit code.
+
+The manifest `kind` is `full`. Excerpts of selected scripts are not supported yet; replay refuses any other kind.
+
 ### Labels and load causes
 
 A source mapped into more than one bundle has `sources[].duplicates`: `bundles` (how many bundles contain it) and `extraBytes` (the bytes of every copy except the largest). Copies can be minified differently, so their sizes may differ. Duplication is reported separately from coverage, since a copy can be both needed and executed, and it never changes totals or budgets. The treemap lists the largest duplicates under "Shipped in more than one file". `[unmapped]` is never a duplicate.

@@ -188,12 +188,13 @@ pub fn attach(
         // Loaders such as Babel replace sourcesContent with their own output. The graph
         // still describes these sources when it matches the file on disk; its locations
         // stay unverified against the maps.
+        let file = directory.join(&module.source);
         ensure!(
-            std::fs::read(directory.join(&module.source))
-                .is_ok_and(|bytes| crate::sha256(&bytes) == *expected),
+            std::fs::read(&file).is_ok_and(|bytes| crate::sha256(&bytes) == *expected),
             "graph source snapshot differs from sourcesContent for {}; regenerate the graph from this build's sources",
             module.source
         );
+        report.read_files.push(file);
         on_disk_only += 1;
     }
     let mut paths = Vec::new();

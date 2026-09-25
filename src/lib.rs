@@ -3,6 +3,7 @@ pub mod attribution;
 pub mod baseline;
 pub mod ci;
 pub mod coverage;
+pub mod evidence;
 pub mod graph;
 pub mod input;
 pub mod maps;
@@ -26,7 +27,7 @@ use attribution::{IndexedSegment, IndexedSource, UNMAPPED};
 use coverage::Interval;
 use text::TextIndex;
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Counts {
     pub bytes: usize,
@@ -261,6 +262,10 @@ pub struct Report {
     pub recommendations: Vec<recommendations::Recommendation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_generator: Option<annotations::LabelGenerator>,
+    /// Local files this analysis read: bundles (including excluded ones), maps, and
+    /// sources checked on disk. Evidence export copies exactly these.
+    #[serde(skip)]
+    pub read_files: Vec<PathBuf>,
 }
 
 /// Summary output keeps at most this many diagnostics per bundle; `--details` keeps all.
@@ -425,6 +430,7 @@ pub fn analyze_with_options(
         import_paths: None,
         recommendations: Vec::new(),
         label_generator: None,
+        read_files: Vec::new(),
     };
     for path in options.maps.keys() {
         coverage::validate_path(path)?;
@@ -440,6 +446,7 @@ pub fn analyze_with_options(
     let exclude = ci::globs(&options.exclude)?;
     for file in files {
         let path = file.strip_prefix(dir)?.to_string_lossy().replace('\\', "/");
+        report.read_files.push(file.clone());
         if (!options.include.is_empty() && !include.is_match(&path)) || exclude.is_match(&path) {
             coverage.remove(&path);
             report.excluded_bundles.push(path);
@@ -452,6 +459,7 @@ pub fn analyze_with_options(
         let map_data = maps::load_with_location(&file, &content, dir, options.maps.get(&path))
             .with_context(|| format!("locate source map for {path}"))?;
         let (segments, map_hash, mut sources, rejected) = if let Some(map) = map_data {
+            report.read_files.extend(map.path.clone());
             let attribution::IndexedAttribution {
                 segments,
                 rejected,

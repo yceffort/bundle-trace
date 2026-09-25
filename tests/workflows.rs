@@ -516,3 +516,128 @@ fn labels_and_loading_attach_without_changing_counts_and_drop_absent_evidence() 
         coldpath::annotations::attach_labels(&mut report, extra.to_string().as_bytes()).is_err()
     );
 }
+
+#[test]
+fn evidence_replays_offline_after_the_workspace_is_gone() {
+    let f = Fixture::new();
+    let run = |cwd: &PathBuf, args: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_coldpath"))
+            .current_dir(cwd)
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    let work = f.0.join("work");
+    fs::create_dir_all(work.join("site/files")).unwrap();
+    fs::create_dir_all(work.join("site/maps")).unwrap();
+    let source = "ab;cd";
+    fs::write(work.join("site/files/app.js"), source).unwrap();
+    // Outside the analysis root, as snapshot binds unfetchable maps.
+    fs::write(
+        work.join("site/maps/app.map"),
+        json!({"version":3,"sources":["../src/a.ts","../src/b.ts"],"names":[],"mappings":"AAAA,GCAA"}).to_string(),
+    )
+    .unwrap();
+    // Node coverage names scripts by absolute file:// URL; the factory never ran.
+    let url = format!(
+        "file://{}/app.js",
+        fs::canonicalize(work.join("site/files")).unwrap().display()
+    );
+    let coverage = json!({"result":[{"url":url,"source":source,"functions":[
+        {"functionName":"","isBlockCoverage":true,"ranges":[{"startOffset":0,"endOffset":5,"count":1}]},
+        {"functionName":"factory","isBlockCoverage":true,"ranges":[{"startOffset":3,"endOffset":5,"count":0}]}
+    ]}]})
+    .to_string();
+    fs::write(work.join("node.json"), &coverage).unwrap();
+    let exported = run(
+        &work,
+        &[
+            "--dir",
+            "site/files",
+            "--coverage",
+            "node.json",
+            "--map",
+            "app.js=site/maps/app.map",
+            "--export",
+            "evidence",
+            "--json",
+            "original.json",
+        ],
+    );
+    assert!(
+        exported.status.success(),
+        "{}",
+        String::from_utf8_lossy(&exported.stderr)
+    );
+    let positional = run(
+        &work,
+        &[
+            "site/files/app.js",
+            "--export",
+            "static",
+            "--json",
+            "static.json",
+        ],
+    );
+    assert!(
+        positional.status.success(),
+        "{}",
+        String::from_utf8_lossy(&positional.stderr)
+    );
+
+    let offline = f.0.join("offline");
+    fs::create_dir_all(&offline).unwrap();
+    for name in ["evidence", "static"] {
+        fs::rename(work.join(name), offline.join(name)).unwrap();
+    }
+    let original = fs::read(work.join("original.json")).unwrap();
+    let totals: Value = serde_json::from_slice(&original).unwrap();
+    assert_eq!(
+        totals["totals"]["unobservedBytes"], 2,
+        "file:// coverage must match"
+    );
+    let original_static = fs::read(work.join("static.json")).unwrap();
+    fs::remove_dir_all(&work).unwrap();
+
+    let evidence = offline.join("evidence");
+    let manifest: Value =
+        serde_json::from_slice(&fs::read(evidence.join("manifest.json")).unwrap()).unwrap();
+    assert_eq!(manifest["kind"], "full");
+    assert_eq!(manifest["invocation"]["dir"], "tree/files");
+    assert_eq!(
+        manifest["invocation"]["maps"],
+        json!(["app.js=tree/maps/app.map"])
+    );
+    assert_eq!(
+        manifest["invocation"]["coverage"],
+        json!(["inputs/0/node.json"])
+    );
+    // Raw V8 input, including the zero-count factory, is kept byte for byte.
+    assert_eq!(
+        fs::read_to_string(evidence.join("inputs/0/node.json")).unwrap(),
+        coverage
+    );
+
+    for (name, expected) in [("evidence", &original), ("static", &original_static)] {
+        let replayed = run(
+            &offline,
+            &["--replay", name, "--json", &format!("{name}.json")],
+        );
+        assert!(
+            replayed.status.success(),
+            "{}",
+            String::from_utf8_lossy(&replayed.stderr)
+        );
+        assert_eq!(
+            &fs::read(offline.join(format!("{name}.json"))).unwrap(),
+            expected
+        );
+    }
+
+    fs::write(evidence.join("tree/maps/app.map"), "{}").unwrap();
+    let changed = run(&offline, &["--replay", "evidence"]);
+    assert_eq!(changed.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&changed.stderr).contains("tree/maps/app.map no longer matches")
+    );
+}
