@@ -41,6 +41,8 @@ execFileSync(
   [join(input, '*.js'), '--dir', input, '--coverage', coverage, '--url-prefix', 'https://fixture.invalid/', '--treemap', html],
   {stdio: 'pipe'},
 )
+// Tiles directly inside the focus; nested tiles repeat their contents' bytes.
+const top = '.tile[data-depth="0"]'
 const browser = await chromium.launch({headless: true})
 try {
   const page = await browser.newPage({viewport: {width: 1440, height: 1000}})
@@ -59,14 +61,21 @@ try {
   await page.locator('#options summary').click()
   assert(await page.getByLabel('Show files not loaded in any recording').isChecked())
   assert.equal(await page.locator('#rows tr').count(), 2)
-  assert.equal(await page.locator('.tile').count(), 2)
-  assert.equal(await page.locator('.tile').evaluateAll((tiles) => tiles.reduce((sum, tile) => sum + Number(tile.dataset.bytes), 0)), 90)
+  assert.equal(await page.locator(top).count(), 2)
+  assert.equal(await page.locator(top).evaluateAll((tiles) => tiles.reduce((sum, tile) => sum + Number(tile.dataset.bytes), 0)), 90)
+  // Bundles with room show their folders inside; selecting a nested box zooms straight to it.
+  assert.deepEqual(await page.locator('.tile.group[data-depth="0"]').evaluateAll((tiles) => tiles.map((tile) => tile.ariaLabel)), ['app.js, 80 bytes', 'lazy.js, 10 bytes'])
+  assert.equal(await page.locator('.tile[data-depth="1"]').first().getAttribute('tabindex'), '-1')
+  await page.locator('.tile.group[data-depth="1"][aria-label^="src,"]').click({position: {x: 16, y: 10}})
+  assert.equal(await page.locator('#scope').textContent(), 'src')
+  assert.equal(await page.locator('#treemap .layer').count(), 1)
+  await page.getByRole('button', {name: 'All bundles', exact: true}).click()
   assert.deepEqual(await page.locator('#stats strong').allTextContents(), ['90 B', '40 B', '40 B', '10 B'])
   await page.getByRole('button', {name: 'app.js', exact: true}).click()
   await page.getByRole('button', {name: 'src', exact: true}).click()
   await page.getByRole('button', {name: 'components', exact: true}).click()
   assert.equal(await page.locator('#rows tr').count(), 15)
-  assert.equal(await page.locator('.tile').count(), 15, 'small files must remain reachable')
+  assert.equal(await page.locator(top).count(), 15, 'small files must remain reachable')
   await page.getByRole('button', {name: 'file00.ts', exact: true}).focus()
   await page.keyboard.press('Enter')
   assert.match(await page.locator('#file').textContent(), /src\/components\/file00.ts/)
@@ -81,13 +90,13 @@ try {
   await page.getByRole('button', {name: 'All bundles', exact: true}).click()
   await page.getByRole('searchbox').fill('file00')
   assert.equal(await page.locator('#rows tr').count(), 1)
-  assert.equal(await page.locator('.tile').getAttribute('data-bytes'), '2')
+  assert.equal(await page.locator(top).getAttribute('data-bytes'), '2')
   await page.getByRole('searchbox').fill('not-found')
   assert(await page.locator('#empty').isVisible())
   await page.getByRole('searchbox').fill('')
   await page.getByLabel('Mapped only', {exact: true}).check()
   assert.equal(await page.locator('#rows tr').count(), 1)
-  assert.equal(await page.locator('.tile').getAttribute('data-bytes'), '80')
+  assert.equal(await page.locator(top).getAttribute('data-bytes'), '80')
   assert.deepEqual(await page.locator('#stats strong').allTextContents(), ['90 B', '40 B', '40 B', '10 B'])
   await page.getByLabel('Mapped only', {exact: true}).uncheck()
   await page.getByLabel('Group sources').selectOption('package')
@@ -138,7 +147,7 @@ try {
   assert.deepEqual(errors, [])
   assert.deepEqual(requests, [])
   console.log(
-    'Verified offline hierarchical treemap, all 15 small entries, exact area totals, coverage states, keyboard navigation, search, package grouping, mapped filter, mobile layout and hostile source names.',
+    'Verified offline nested zoomable treemap, all 15 small entries, exact area totals, coverage states, keyboard navigation, search, package grouping, mapped filter, mobile layout and hostile source names.',
   )
 } finally {
   await browser.close()

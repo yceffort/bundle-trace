@@ -190,7 +190,7 @@ coldpath dist/app.js dist/app.js.map --json artifacts/size.json
 coldpath 'dist/**/*.js' --tsv -
 ```
 
-Open the HTML directly in your browser. Click bundles and folders to zoom, navigate back with breadcrumbs, search sources, or group by package. Tile area represents bytes; coverage colors distinguish observed, unobserved, and unmeasured code. Every file is available in the table, including small tiles. With file/glob inputs and no output option, the CLI writes `coldpath.html` in the current directory, replacing any existing file, and prints `Wrote coldpath.html` after saving it.
+Open the HTML directly in your browser. Bundles and folders with room show their contents nested inside, as in source-map-explorer. Click any box to zoom into it with an animated transition, zoom back out with breadcrumbs or the browser's back button, search sources, or group by package. Tile area represents bytes; coverage colors distinguish observed, unobserved, and unmeasured code. Every file is available in the table, including small tiles. With file/glob inputs and no output option, the CLI writes `coldpath.html` in the current directory, replacing any existing file, and prints `Wrote coldpath.html` after saving it.
 
 Build your application with source maps and point the CLI at its JavaScript output:
 

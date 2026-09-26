@@ -404,6 +404,12 @@
         height: clamp(320px, 58vh, 680px);
         margin: 14px 0 18px;
         border-radius: 8px;
+        overflow: hidden;
+      }
+      #treemap > .layer {
+        position: absolute;
+        inset: 0;
+        transform-origin: 0 0;
       }
       .tile {
         position: absolute;
@@ -456,6 +462,27 @@
       }
       .tile:hover small {
         text-decoration: underline;
+      }
+      /* A folder or bundle drawn with its contents: a title strip over nested tiles. */
+      .tile.group {
+        display: flex;
+        flex-direction: column;
+      }
+      .tile.group > span {
+        display: flex;
+        gap: 8px;
+        max-width: none;
+        margin: 0;
+        padding: 4px 8px;
+        background: none;
+        box-shadow: none;
+        font-size: 12px;
+        line-height: 16px;
+      }
+      .tile.group > span > strong {
+        display: inline;
+        font-size: 12px;
+        color: var(--muted);
       }
       .tile.new-source {
         outline: 3px dashed var(--accent);
@@ -736,7 +763,7 @@
         <div class="legend" id="legend"></div>
         <p id="phase-note" class="note"></p>
         <p id="comparison" class="note"></p>
-        <p id="treemap-note" class="note">Tile area is generated size. Select a tile to open it; the browser's back button goes up a level.</p>
+        <p id="treemap-note" class="note">Tile area is generated size. Select a box to zoom in; use the path above or the browser's back button to zoom out.</p>
         <div id="treemap" aria-label="Bundle size treemap"></div>
         <div id="file" hidden></div>
         <p id="empty" hidden>No matching sources in this location.</p>
@@ -970,9 +997,8 @@
         }
         function select(node) {
           if (node === focus) return
-          focus = node
           history.pushState({coldpath: keyPath(node)}, '')
-          render()
+          zoom(node)
         }
         window.addEventListener('popstate', (event) => {
           let node = root
@@ -981,9 +1007,30 @@
             if (!child) break
             node = child
           }
+          zoom(node)
+        })
+        const within = (node, ancestor) => {
+          for (; node; node = node.parent) if (node === ancestor) return true
+          return false
+        }
+        // The drawn box closest to `node`: itself, or the nearest ancestor that has a box.
+        const box = (map, node) => {
+          for (; node; node = node.parent) if (map.has(node)) return map.get(node)
+        }
+        const fit = (r) => `translate(${r.x}%,${r.y}%) scale(${r.w / 100},${r.h / 100})`
+        const fill = (r) => `translate(${-100 * r.x / r.w}%,${-100 * r.y / r.h}%) scale(${100 / r.w},${100 / r.h})`
+        // Renders the new focus at once, then animates only the view: zooming in grows it
+        // from the selected box, zooming out shrinks the previous focus back into its box.
+        function zoom(node) {
+          const previous = focus, before = rects, wasShown = !$('treemap').hidden
           focus = node
           render()
-        })
+          const layer = $('treemap').firstElementChild
+          if (!wasShown || $('treemap').hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+          const from = within(node, previous) ? (r => r && fit(r))(box(before, node)) :
+            within(previous, node) ? (r => r && fill(r))(box(rects, previous)) : null
+          if (from) layer.animate([{transform: from}, {transform: 'none'}], {duration: 320, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)'})
+        }
         function tooltip(row) {
           return (
             (row.source || row.name) +
@@ -1034,13 +1081,27 @@
             unobserved = ((row.observedBytes + row.unobservedBytes) / total) * 100
           return `linear-gradient(90deg,var(--observed) 0% ${observed}%,var(--unobserved) ${observed}% ${unobserved}%,var(--unmeasured) ${unobserved}% 100%)`
         }
-        function layout(items, x, y, w, h) {
+        // Folders and bundles with room show their contents, up to this many levels below the focus.
+        const nestDepth = 3, header = 24, pad = 4
+        const byBytes = (rows) => rows.filter((row) => row.bytes > 0).sort((a, b) => b.bytes - a.bytes)
+        let rects = new Map()
+        function layout(items, x, y, w, h, layer, depth) {
           if (!items.length) return
           if (items.length === 1) {
             const row = items[0],
               tile = element('button'),
-              label = element('span', row.name)
-            tile.className = 'tile'
+              label = element('span', row.name),
+              width = (w / 100) * layer.clientWidth,
+              height = (h / 100) * layer.clientHeight
+            // Nested slivers are unreadable and unclickable; the table still lists them.
+            if (depth && (width < 4 || height < 4)) return
+            rects.set(row.ref, {x, y, w, h})
+            const children = row.kind !== 'file' && depth < nestDepth && width >= 110 && height >= 80 ?
+              byBytes([...row.children.values()].map(compact)) : []
+            tile.className = children.length ? 'tile group' : 'tile'
+            tile.dataset.depth = depth
+            // Tab through this level only; nested tiles are reachable by zooming or from the table.
+            if (depth) tile.tabIndex = -1
             if ($('color').value === 'changes' && row.newSources) tile.classList.add('new-source')
             tile.dataset.bytes = row.bytes
             tile.dataset.interactionOnly = row.interactionOnly
@@ -1052,18 +1113,25 @@
             tile.style.cssText = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;background:${color(row)}`
             tile.title = tooltip(row)
             tile.setAttribute('aria-label', row.name + ', ' + number(row.bytes) + ' bytes')
+            tile.onclick = () => select(row.ref)
+            layer.append(tile)
+            if (children.length) {
+              tile.style.background = 'var(--raised)'
+              label.append(element('strong', size(row.bytes)))
+              tile.append(label)
+              const px = (pad / layer.clientWidth) * 100, py = (pad / layer.clientHeight) * 100,
+                top = (header / layer.clientHeight) * 100
+              layout(children, x + px, y + top, w - 2 * px, h - top - py, layer, depth + 1)
+              return
+            }
             const measured = row.bytes - row.unmeasuredBytes
             label.append(
               element('strong', size(row.bytes)),
               ...(measured && $('color').value !== 'changes' ? [element('span', Math.round(row.unobservedBytes / measured * 100) + '% never ran')] : []),
               element('small', $('color').value === 'changes' && row.newSources ? 'Contains new source' : row.kind === 'file' ? 'View details' : 'Open'),
             )
-            label.hidden =
-              (w / 100) * $('treemap').clientWidth < 85 ||
-              (h / 100) * $('treemap').clientHeight < 96
+            label.hidden = width < 85 || height < 96
             tile.append(label)
-            tile.onclick = () => select(row.ref)
-            $('treemap').append(tile)
             return
           }
           const total = items.reduce((sum, row) => sum + row.bytes, 0)
@@ -1071,12 +1139,12 @@
             index = 0
           while (index < items.length - 1 && sum < total / 2) sum += items[index++].bytes
           const ratio = sum / total
-          if (w * $('treemap').clientWidth >= h * $('treemap').clientHeight) {
-            layout(items.slice(0, index), x, y, w * ratio, h)
-            layout(items.slice(index), x + w * ratio, y, w * (1 - ratio), h)
+          if (w * layer.clientWidth >= h * layer.clientHeight) {
+            layout(items.slice(0, index), x, y, w * ratio, h, layer, depth)
+            layout(items.slice(index), x + w * ratio, y, w * (1 - ratio), h, layer, depth)
           } else {
-            layout(items.slice(0, index), x, y, w, h * ratio)
-            layout(items.slice(index), x, y + h * ratio, w, h * (1 - ratio))
+            layout(items.slice(0, index), x, y, w, h * ratio, layer, depth)
+            layout(items.slice(index), x, y + h * ratio, w, h * (1 - ratio), layer, depth)
           }
         }
         function render() {
@@ -1252,15 +1320,11 @@
           $('empty').hidden = items.length !== 0
           $('treemap').hidden = focus.kind === 'file' || items.length === 0
           $('treemap-note').hidden = $('treemap').hidden
-          $('treemap').replaceChildren()
-          if (!$('treemap').hidden)
-            layout(
-              items.filter((row) => row.bytes > 0).sort((a, b) => b.bytes - a.bytes),
-              0,
-              0,
-              100,
-              100,
-            )
+          const layer = element('div')
+          layer.className = 'layer'
+          $('treemap').replaceChildren(layer)
+          rects = new Map()
+          if (!$('treemap').hidden) layout(byBytes(items), 0, 0, 100, 100, layer, 0)
           $('filter-note').textContent =
             $('search').value || $('mapped').checked
               ? 'Search and mapped-only filtering affect this view. Overall totals and CI budgets remain unchanged.'
