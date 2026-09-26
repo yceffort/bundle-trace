@@ -17,6 +17,13 @@ assert.deepEqual(
   ['x1', 'y2'],
   'webpack 4 chunks',
 )
+assert.deepEqual(
+  chunkModules('!function(){try{self._sentryDebugIds={}}catch(e){}}(),(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[1],{34:(e)=>{e.exports=1}}]);')?.modules.map(
+    (m) => m.id,
+  ),
+  ['34'],
+  'chunks joined to a prelude by a comma',
+)
 const root = fileURLToPath(new URL('../', import.meta.url))
 const out = join(root, 'artifacts', 'inferred')
 await rm(out, {recursive: true, force: true})
