@@ -1,5 +1,5 @@
 // Installs the packed coldpath package into a fresh project and runs the full workflow
-// through its public entry points only: coldpath/rollup, coldpath graph, collect and analyze.
+// through its public entry points only: @yceffort/coldpath/rollup, coldpath graph, collect and analyze.
 import assert from 'node:assert/strict'
 import {execFile, execFileSync} from 'node:child_process'
 import {copyFile, mkdir, readFile, rm, writeFile} from 'node:fs/promises'
@@ -32,8 +32,8 @@ await writeFile(
     private: true,
     type: 'module',
     devDependencies: {
-      coldpath: `file:${main}`,
-      [`coldpath-${process.platform}-${process.arch}`]: `file:${native}`,
+      '@yceffort/coldpath': `file:${main}`,
+      [`@yceffort/coldpath-${process.platform}-${process.arch}`]: `file:${native}`,
       esbuild: devDependencies.esbuild,
       rollup: devDependencies.rollup,
       playwright: devDependencies['@playwright/test'],
@@ -46,7 +46,7 @@ await writeFile(
   join(project, 'build.mjs'),
   `import {rollup} from 'rollup'
 import {build} from 'esbuild'
-import coldpathGraph from 'coldpath/rollup'
+import coldpathGraph from '@yceffort/coldpath/rollup'
 const bundle = await rollup({input: 'src/entry.js', plugins: [coldpathGraph()]})
 await bundle.write({dir: 'dist/assets', format: 'esm', sourcemap: true})
 await build({entryPoints: ['src/entry.js'], bundle: true, format: 'esm', outdir: 'esbuild', metafile: true, write: false})
@@ -121,4 +121,6 @@ assert.equal(report.initialScenario, 'initial')
 assert(report.importPaths.length > 0, 'graph import paths missing')
 assert.equal(report.bundles[0].verification[0].source, 'sha256')
 assert(report.totals.unobservedBytes > 0 && report.totals.unmeasuredBytes === 0)
-console.log('Verified a fresh install: coldpath/rollup, coldpath graph, coldpath collect --scenarios, and coldpath analyze --scenarios.')
+console.log(
+  'Verified a fresh install: @yceffort/coldpath/rollup, coldpath graph, coldpath collect --scenarios, and coldpath analyze --scenarios.',
+)

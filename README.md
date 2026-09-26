@@ -22,10 +22,10 @@ Early-stage software: the CLI and JSON schema may change. Unobserved bytes are c
 ## Install
 
 ```sh
-npm install --save-dev coldpath
+npm install --save-dev @yceffort/coldpath
 ```
 
-The npm package includes a prebuilt analyzer for macOS (arm64, x64) and Linux (arm64, x64; glibc 2.35 or newer) through an optional `coldpath-<platform>-<arch>` dependency. It puts the collector, graph export, and analyzer behind one `coldpath` command, and exports `coldpath/rollup`, `coldpath/vite`, and `coldpath/webpack` graph plugins. Collection additionally needs `playwright` in your project.
+The npm package includes a prebuilt analyzer for macOS (arm64, x64) and Linux (arm64, x64; glibc 2.35 or newer) through an optional `@yceffort/coldpath-<platform>-<arch>` dependency. Windows is not supported. It puts the collector, graph export, and analyzer behind one `coldpath` command, and exports `@yceffort/coldpath/rollup`, `@yceffort/coldpath/vite`, and `@yceffort/coldpath/webpack` graph plugins. Collection additionally needs `playwright` in your project.
 
 On other platforms, or to use the analyzer without Node.js, build it with Rust 1.88 or newer:
 
@@ -51,7 +51,7 @@ coldpath collect --scenarios coldpath.scenarios.json
 coldpath analyze --scenarios coldpath.scenarios.json --graph dist/assets/coldpath.graph.json --treemap artifacts/actions.html
 ```
 
-`coldpath analyze` (or `coldpath` with analyzer options) runs the Rust analyzer from `COLDPATH_ANALYZER`, the installed `coldpath-<platform>-<arch>` package, or the native `coldpath` binary on `PATH` (the npm wrapper skips itself), in that order. See [collecting coverage](docs/collecting.md#scenario-files) for the scenario file.
+`coldpath analyze` (or `coldpath` with analyzer options) runs the Rust analyzer from `COLDPATH_ANALYZER`, the installed `@yceffort/coldpath-<platform>-<arch>` package, or the native `coldpath` binary on `PATH` (the npm wrapper skips itself), in that order. See [collecting coverage](docs/collecting.md#scenario-files) for the scenario file.
 
 ## Try the recorded example
 
@@ -78,7 +78,7 @@ This walkthrough uses [`examples/demo`](examples/demo), a small React dashboard 
 **1. Emit a dependency graph from your build.** Add the plugin and enable source maps (`vite.config.mjs`):
 
 ```js
-import coldpathGraph from 'coldpath/vite' // coldpath/rollup and coldpath/webpack also exist
+import coldpathGraph from '@yceffort/coldpath/vite' // @yceffort/coldpath/rollup and @yceffort/coldpath/webpack also exist
 
 export default {
   plugins: [coldpathGraph()],

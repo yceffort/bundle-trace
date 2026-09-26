@@ -27,7 +27,7 @@ The adapter takes edges and import kinds from the metafile and parses source syn
 Add the plugin to your webpack configuration. After a successful build it writes `coldpath.graph.json` to the output directory. Optional `root` defaults to webpack's `context`, and `fileName` changes the output name:
 
 ```js
-import ColdpathGraphPlugin from 'coldpath/webpack'
+import ColdpathGraphPlugin from '@yceffort/coldpath/webpack'
 
 export default {
   devtool: 'source-map',
@@ -59,7 +59,7 @@ See webpack's [stats format](https://webpack.js.org/api/stats/) for the underlyi
 Put the exporter early in your plugin list. It uses actual resolved module IDs and records import syntax before later transformations where possible:
 
 ```js
-import coldpathGraph from 'coldpath/rollup' // or 'coldpath/vite'
+import coldpathGraph from '@yceffort/coldpath/rollup' // or '@yceffort/coldpath/vite'
 
 export default {
   // Rollup: also configure input/output and sourcemap: true.

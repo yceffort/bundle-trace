@@ -1,4 +1,4 @@
-import coldpathGraph from 'coldpath/vite'
+import coldpathGraph from '@yceffort/coldpath/vite'
 
 export default {
   plugins: [coldpathGraph()],
