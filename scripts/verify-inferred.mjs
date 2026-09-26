@@ -18,9 +18,9 @@ assert.deepEqual(
   'webpack 4 chunks',
 )
 assert.deepEqual(
-  chunkModules('!function(){try{self._sentryDebugIds={}}catch(e){}}(),(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[1],{34:(e)=>{e.exports=1}}]);')?.modules.map(
-    (m) => m.id,
-  ),
+  chunkModules(
+    '!function(){try{self._sentryDebugIds={}}catch(e){}}(),(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[1],{34:(e)=>{e.exports=1}}]);',
+  )?.modules.map((m) => m.id),
   ['34'],
   'chunks joined to a prelude by a comma',
 )
