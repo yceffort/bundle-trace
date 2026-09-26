@@ -64,7 +64,10 @@ try {
   assert.equal(await page.locator(top).count(), 2)
   assert.equal(await page.locator(top).evaluateAll((tiles) => tiles.reduce((sum, tile) => sum + Number(tile.dataset.bytes), 0)), 90)
   // Bundles with room show their folders inside; selecting a nested box zooms straight to it.
-  assert.deepEqual(await page.locator('.tile.group[data-depth="0"]').evaluateAll((tiles) => tiles.map((tile) => tile.ariaLabel)), ['app.js, 80 bytes', 'lazy.js, 10 bytes'])
+  assert.deepEqual(await page.locator('.tile.group[data-depth="0"]').evaluateAll((tiles) => tiles.map((tile) => tile.ariaLabel)), [
+    'app.js, 80 bytes',
+    'lazy.js, 10 bytes',
+  ])
   assert.equal(await page.locator('.tile[data-depth="1"]').first().getAttribute('tabindex'), '-1')
   await page.locator('.tile.group[data-depth="1"][aria-label^="src,"]').click({position: {x: 16, y: 10}})
   assert.equal(await page.locator('#scope').textContent(), 'src')
