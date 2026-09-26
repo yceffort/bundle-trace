@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -117,6 +118,11 @@ struct Args {
     #[arg(long, conflicts_with = "replay")]
     #[serde(skip)]
     export: Option<PathBuf>,
+    /// Export only this bundle (bundle-relative path) or every bundle containing this
+    /// report source, as an excerpt. Repeatable.
+    #[arg(long, requires = "export")]
+    #[serde(skip)]
+    export_select: Vec<String>,
     /// Re-run an --export directory offline and compare with its recorded results.
     #[arg(long)]
     #[serde(skip)]
@@ -213,8 +219,29 @@ fn export(
     args: &Args,
     root: &Path,
     selection: Option<&coldpath::selection::Selection>,
+    input: &coldpath::input::InputOptions,
     report: &coldpath::Report,
 ) -> Result<()> {
+    let mut selected = BTreeSet::new();
+    for selector in &args.export_select {
+        let matched = report
+            .bundles
+            .iter()
+            .filter(|b| b.path == *selector || b.sources.iter().any(|s| s.source == *selector))
+            .map(|b| b.path.clone())
+            .collect::<Vec<_>>();
+        ensure!(
+            !matched.is_empty(),
+            "--export-select {selector:?} {}",
+            if report.excluded_bundles.contains(selector) {
+                "is excluded from the analysis"
+            } else {
+                "matches no analyzed bundle or source"
+            }
+        );
+        selected.extend(matched);
+    }
+    let excerpt = !selected.is_empty();
     let canonical =
         |path: &Path| fs::canonicalize(path).with_context(|| format!("resolve {}", path.display()));
     let root = canonical(root)?;
@@ -242,12 +269,51 @@ fn export(
         .cloned()
         .collect::<Vec<_>>();
     let mut writer = coldpath::evidence::Writer::new(out, &located)?;
+    // An excerpt copies the selected bundles and their maps and lists everything else.
+    let mut copied = BTreeSet::new();
+    for bundle in report.bundles.iter().filter(|b| selected.contains(&b.path)) {
+        copied.insert(canonical(&root.join(&bundle.path))?);
+        copied.extend(
+            bundle
+                .source_map_path
+                .iter()
+                .map(|p| canonical(p))
+                .collect::<Result<Vec<_>>>()?,
+        );
+    }
+    let bundles = report
+        .bundles
+        .iter()
+        .map(|b| &b.path)
+        .chain(&report.excluded_bundles)
+        .map(|path| canonical(&root.join(path)))
+        .collect::<Result<BTreeSet<_>>>()?;
+    let maps = report
+        .bundles
+        .iter()
+        .filter_map(|b| b.source_map_path.as_deref())
+        .map(canonical)
+        .collect::<Result<BTreeSet<_>>>()?;
     for path in &read {
-        writer.tree_file(path, "located")?;
+        if !excerpt || copied.contains(path) {
+            writer.tree_file(path, "located")?;
+        } else if bundles.contains(path) {
+            writer.omit(path, "bundle")?;
+        } else if maps.contains(path) {
+            writer.omit(path, "map")?;
+        } else {
+            writer.omit(path, "located")?;
+        }
     }
     let mut inv = args.clone();
     inv.file_url_root = Some(args.file_url_root.clone().unwrap_or(root.clone()));
     inv.dir = Some(writer.tree_dir(&root)?.into());
+    // Import paths, labels, and load causes do not shape the bundle results an excerpt verifies.
+    let (graph_root, metafile_root) = if excerpt {
+        (None, None)
+    } else {
+        (graph_root, metafile_root)
+    };
     inv.graph_root = graph_root
         .map(|p| writer.tree_dir(&p))
         .transpose()?
@@ -256,46 +322,74 @@ fn export(
         .map(|p| writer.tree_dir(&p))
         .transpose()?
         .map(Into::into);
-    // Positional globs become the literal files they selected.
+    // Positional globs become the literal files they selected; an excerpt lists its bundles.
+    let keep = |bundle: &str| !excerpt || selected.contains(bundle);
     inv.inputs = match selection {
         Some(selection) => selection
             .files
             .iter()
+            .filter(|file| keep(&file.to_string_lossy().replace('\\', "/")))
             .map(|file| root.join(file))
-            .chain(selection.maps.values().cloned())
+            .chain(
+                selection
+                    .maps
+                    .iter()
+                    .filter(|(bundle, _)| keep(bundle))
+                    .map(|(_, map)| map.clone()),
+            )
             .map(|path| writer.tree_file(&canonical(&path)?, "located"))
+            .collect::<Result<_>>()?,
+        None if excerpt => selected
+            .iter()
+            .map(|bundle| writer.tree_file(&canonical(&root.join(bundle))?, "located"))
             .collect::<Result<_>>()?,
         None => Vec::new(),
     };
-    inv.maps = args
-        .maps
-        .iter()
-        .map(|binding| {
-            let (bundle, map) = binding.split_once('=').unwrap();
-            Ok(format!(
-                "{bundle}={}",
-                writer.tree_file(&canonical(Path::new(map))?, "map")?
-            ))
-        })
-        .collect::<Result<_>>()?;
+    let mut maps = Vec::new();
+    for binding in &args.maps {
+        let (bundle, map) = binding.split_once('=').unwrap();
+        let map = canonical(Path::new(map))?;
+        if keep(bundle) {
+            maps.push(format!("{bundle}={}", writer.tree_file(&map, "map")?));
+        } else {
+            writer.omit(&map, "map")?;
+        }
+    }
+    inv.maps = maps;
     inv.coverage = args
         .coverage
         .iter()
-        .map(|path| writer.input(path, "coverage").map(Into::into))
+        .map(|path| {
+            if excerpt {
+                let (data, removed) = coldpath::input::filter(path, &root, input, &selected)?;
+                writer.derived(path, &data, "coverage", removed)
+            } else {
+                writer.input(path, "coverage")
+            }
+            .map(Into::into)
+        })
         .collect::<Result<_>>()?;
-    for (path, role) in [
-        (&mut inv.script_map, "script-map"),
-        (&mut inv.config, "config"),
-        (&mut inv.metafile, "metafile"),
-        (&mut inv.graph, "graph"),
-        (&mut inv.labels, "labels"),
-        (&mut inv.loading, "loading"),
+    for (path, role, required) in [
+        (&mut inv.script_map, "script-map", true),
+        (&mut inv.config, "config", true),
+        (&mut inv.metafile, "metafile", false),
+        (&mut inv.graph, "graph", false),
+        (&mut inv.labels, "labels", false),
+        (&mut inv.loading, "loading", false),
     ] {
-        if let Some(value) = path {
-            *value = writer.input(value, role)?.into();
+        if let Some(value) = path.take() {
+            if excerpt && !required {
+                writer.omit(&value, role)?;
+            } else {
+                *path = Some(writer.input(&value, role)?.into());
+            }
         }
     }
-    writer.finish(inv.analysis()?, report)
+    writer.finish(
+        inv.analysis()?,
+        report,
+        excerpt.then(|| (args.export_select.clone(), selected)),
+    )
 }
 
 fn main() -> Result<()> {
@@ -466,8 +560,15 @@ fn main() -> Result<()> {
     }
     report.recommendations = coldpath::recommendations::build(&report);
     if let Some(out) = &args.export {
-        export(out, &args, &dir, selection.as_ref(), &report)
-            .with_context(|| format!("export evidence to {}", out.display()))?;
+        export(
+            out,
+            &args,
+            &dir,
+            selection.as_ref(),
+            &options.input,
+            &report,
+        )
+        .with_context(|| format!("export evidence to {}", out.display()))?;
         status!("Wrote evidence {}", out.display());
     }
     let replay_exit = if let Some(manifest) = &replay {
@@ -491,11 +592,18 @@ fn main() -> Result<()> {
                     .unwrap_or("unknown commit"),
             );
             Some(3)
-        } else if differences.is_empty() {
+        } else if !differences.is_empty() {
+            Some(1)
+        } else if let Some(excerpt) = &manifest.excerpt {
+            status!(
+                "Replay verified an excerpt, not a complete reproduction: {} selected bundles reproduced their counts and spans; {} omitted inputs and the full-analysis totals were not checked.",
+                excerpt.bundles.len(),
+                excerpt.omitted.len()
+            );
+            Some(4)
+        } else {
             status!("Replay reproduced every recorded result.");
             None
-        } else {
-            Some(1)
         }
     } else {
         None

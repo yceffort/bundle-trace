@@ -641,3 +641,156 @@ fn evidence_replays_offline_after_the_workspace_is_gone() {
         String::from_utf8_lossy(&changed.stderr).contains("tree/maps/app.map no longer matches")
     );
 }
+
+#[test]
+fn evidence_excerpt_replays_selected_bundles_and_lists_what_it_omits() {
+    let f = Fixture::new();
+    let run = |cwd: &PathBuf, args: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_coldpath"))
+            .current_dir(cwd)
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    let work = f.0.join("work");
+    fs::create_dir_all(work.join("site")).unwrap();
+    fs::create_dir_all(work.join("maps")).unwrap();
+    let map = |sources: [&str; 2]| {
+        json!({"version":3,"sources":sources,"names":[],"mappings":"AAAA,GCAA"}).to_string()
+    };
+    let (a, b) = ("ab;cd", "ef;gh");
+    fs::write(work.join("site/a.js"), a).unwrap();
+    fs::write(work.join("site/a.js.map"), map(["a1.ts", "a2.ts"])).unwrap();
+    fs::write(work.join("site/b.js"), b).unwrap();
+    fs::write(
+        work.join("maps/b.map"),
+        map(["../site/b1.ts", "../site/b2.ts"]),
+    )
+    .unwrap();
+    let root = fs::canonicalize(work.join("site")).unwrap();
+    let entry = |name: &str, source: &str| {
+        json!({"url":format!("file://{}/{name}", root.display()),"source":source,"functions":[
+            {"functionName":"","isBlockCoverage":true,"ranges":[{"startOffset":0,"endOffset":5,"count":1}]},
+            {"functionName":"factory","isBlockCoverage":true,"ranges":[{"startOffset":3,"endOffset":5,"count":0}]}
+        ]})
+    };
+    fs::write(
+        work.join("load.json"),
+        json!({"result":[entry("a.js", a), entry("b.js", b)]}).to_string(),
+    )
+    .unwrap();
+    let export = |out: &str, select: &[&str]| {
+        let mut args = vec![
+            "--dir",
+            "site",
+            "--coverage",
+            "load.json",
+            "--map",
+            "b.js=maps/b.map",
+            "--export",
+            out,
+            "--json",
+        ];
+        let json = format!("{out}.json");
+        args.push(&json);
+        for selector in select {
+            args.extend(["--export-select", selector]);
+        }
+        run(&work, &args)
+    };
+    for (out, select) in [("full", &[][..]), ("excerpt", &["b1.ts"][..])] {
+        let exported = export(out, select);
+        assert!(
+            exported.status.success(),
+            "{}",
+            String::from_utf8_lossy(&exported.stderr)
+        );
+    }
+    let missing = export("missing", &["nothing.ts"]);
+    assert!(
+        String::from_utf8_lossy(&missing.stderr)
+            .contains("\"nothing.ts\" matches no analyzed bundle or source")
+    );
+    let full: Value = serde_json::from_slice(&fs::read(work.join("full.json")).unwrap()).unwrap();
+
+    let offline = f.0.join("offline");
+    fs::create_dir_all(&offline).unwrap();
+    fs::rename(work.join("excerpt"), offline.join("excerpt")).unwrap();
+    fs::remove_dir_all(&work).unwrap();
+    let evidence = offline.join("excerpt");
+    let manifest: Value =
+        serde_json::from_slice(&fs::read(evidence.join("manifest.json")).unwrap()).unwrap();
+    assert_eq!(manifest["kind"], "excerpt");
+    let excerpt = &manifest["excerpt"];
+    assert_eq!(excerpt["selectors"], json!(["b1.ts"]));
+    assert_eq!(excerpt["bundles"], json!(["b.js"]));
+    let omitted = excerpt["omitted"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| {
+            (
+                f["path"].as_str().unwrap(),
+                f["role"].as_str().unwrap(),
+                f["sha256"].as_str().unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        omitted,
+        [
+            ("tree/site/a.js", "bundle", sha256(a.as_bytes()).as_str()),
+            (
+                "tree/site/a.js.map",
+                "map",
+                sha256(map(["a1.ts", "a2.ts"]).as_bytes()).as_str()
+            ),
+        ]
+    );
+    assert!(!evidence.join("tree/site/a.js").exists());
+    assert_eq!(excerpt["fullAnalysis"]["reproducible"], false);
+    assert_eq!(
+        excerpt["fullAnalysis"]["totals"]["bytes"],
+        full["totals"]["bytes"]
+    );
+    assert_eq!(manifest["expected"].get("totals"), None);
+    assert_eq!(excerpt["derived"][0]["removedEntries"], 1);
+    // The filtered recording keeps the selected script's raw offsets, not a re-based copy.
+    let coverage = fs::read_to_string(evidence.join("inputs/0/load.json")).unwrap();
+    assert!(!coverage.contains(a) && coverage.contains(b));
+    let recorded: Value = serde_json::from_str(&coverage).unwrap();
+    assert_eq!(
+        recorded["result"][0]["functions"][1]["ranges"][0]["startOffset"],
+        3
+    );
+
+    let replayed = run(
+        &offline,
+        &["--replay", "excerpt", "--json", "replayed.json"],
+    );
+    assert_eq!(
+        replayed.status.code(),
+        Some(4),
+        "{}",
+        String::from_utf8_lossy(&replayed.stderr)
+    );
+    assert!(String::from_utf8_lossy(&replayed.stdout).contains("not a complete reproduction"));
+    let replay: Value =
+        serde_json::from_slice(&fs::read(offline.join("replayed.json")).unwrap()).unwrap();
+    let bundle = |report: &Value| {
+        report["bundles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|b| b["path"] == "b.js")
+            .unwrap()
+            .clone()
+    };
+    assert_eq!(bundle(&replay), bundle(&full));
+    assert_eq!(replay["bundles"].as_array().unwrap().len(), 1);
+
+    fs::write(evidence.join("tree/site/b.js"), "ef;gX").unwrap();
+    let changed = run(&offline, &["--replay", "excerpt"]);
+    assert_eq!(changed.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&changed.stderr).contains("tree/site/b.js no longer matches"));
+}

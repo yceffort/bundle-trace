@@ -1,6 +1,6 @@
 //! Import adapters deliberately keep missing capture-time evidence missing.
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -175,6 +175,47 @@ fn local_path(url: &str, root: &Path, options: &InputOptions) -> Result<Option<S
         return Ok(Some(clean.into()));
     }
     Ok(None)
+}
+
+/// Removes every coverage entry whose script does not resolve to a `keep` path.
+/// Kept entries retain their values (offsets, counts, source text); JSON formatting
+/// and key order are not preserved. Returns the filtered file and the removed count.
+pub fn filter(
+    path: &Path,
+    root: &Path,
+    options: &InputOptions,
+    keep: &BTreeSet<String>,
+) -> Result<(Vec<u8>, usize)> {
+    let mut value: serde_json::Value = serde_json::from_slice(&fs::read(path)?)
+        .with_context(|| format!("read coverage {}", path.display()))?;
+    let (entries, key) = if value.get("schemaVersion").is_some() {
+        (value.get_mut("scripts"), "path")
+    } else if value.is_array() {
+        (Some(&mut value), "url")
+    } else {
+        (value.get_mut("result"), "url")
+    };
+    let entries = entries
+        .and_then(|v| v.as_array_mut())
+        .with_context(|| format!("{}: unsupported coverage format", path.display()))?;
+    let mut kept = Vec::new();
+    for entry in entries.iter() {
+        let name = entry
+            .get(key)
+            .and_then(|v| v.as_str())
+            .with_context(|| format!("{}: coverage entry has no string {key}", path.display()))?;
+        let local = if key == "path" {
+            Some(name.to_owned())
+        } else {
+            local_path(name, root, options)?
+        };
+        kept.push(local.is_some_and(|local| keep.contains(&local)));
+    }
+    let before = entries.len();
+    let mut flags = kept.into_iter();
+    entries.retain(|_| flags.next().unwrap());
+    let removed = before - entries.len();
+    Ok((serde_json::to_vec(&value)?, removed))
 }
 
 pub fn load(

@@ -1,6 +1,6 @@
 //! Portable evidence: the exact inputs of one analysis plus the results they produced.
 //! Files are copied byte for byte; only filesystem bindings are rewritten.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -17,13 +17,49 @@ const FORMAT: &str = "coldpath-evidence";
 pub struct Manifest {
     pub format: String,
     pub schema_version: u32,
-    /// `full` reproduces the whole analysis. Other kinds are reserved for excerpts.
+    /// `full` reproduces the whole analysis; `excerpt` only the selected bundles.
     pub kind: String,
     pub analyzer: Analyzer,
     /// Analyzer options with every path relative to the evidence directory.
     pub invocation: serde_json::Value,
     pub files: Vec<FileEntry>,
     pub expected: Expected,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub excerpt: Option<Excerpt>,
+}
+
+/// What an excerpt contains, and what it cannot show.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Excerpt {
+    /// `--export-select` values and the bundles they resolved to.
+    pub selectors: Vec<String>,
+    pub bundles: Vec<String>,
+    /// Coverage files reduced to the selected scripts.
+    pub derived: Vec<Derived>,
+    /// Inputs of the full analysis left out: located files by their `tree/` path,
+    /// other inputs by file name.
+    pub omitted: Vec<FileEntry>,
+    pub full_analysis: FullAnalysis,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Derived {
+    pub path: String,
+    pub original_sha256: String,
+    pub removed_entries: usize,
+}
+
+/// Results of the full analysis, kept as context. Replaying the excerpt cannot reproduce them.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FullAnalysis {
+    pub reproducible: bool,
+    pub bundles: usize,
+    pub totals: Counts,
+    pub scenario_totals: BTreeMap<String, Counts>,
+    pub excluded_bundles: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -54,9 +90,13 @@ pub struct FileEntry {
 #[serde(rename_all = "camelCase")]
 pub struct Expected {
     pub scenarios: Vec<String>,
-    pub totals: Counts,
-    pub scenario_totals: BTreeMap<String, Counts>,
-    pub excluded_bundles: Vec<String>,
+    /// Whole-analysis results; absent from an excerpt, which verifies bundles only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub totals: Option<Counts>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scenario_totals: Option<BTreeMap<String, Counts>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub excluded_bundles: Option<Vec<String>>,
     pub bundles: Vec<ExpectedBundle>,
 }
 
@@ -87,13 +127,9 @@ impl Expected {
         };
         Ok(Self {
             scenarios: report.scenarios.clone(),
-            totals: report.totals.clone(),
-            scenario_totals: report
-                .scenario_reports
-                .iter()
-                .map(|s| (s.scenario.clone(), s.totals.clone()))
-                .collect(),
-            excluded_bundles: report.excluded_bundles.clone(),
+            totals: Some(report.totals.clone()),
+            scenario_totals: Some(scenario_totals(report)),
+            excluded_bundles: Some(report.excluded_bundles.clone()),
             bundles: report
                 .bundles
                 .iter()
@@ -118,7 +154,20 @@ impl Expected {
         })
     }
 
-    /// Human-readable differences; empty when the replay reproduced every result.
+    /// The selected bundles only, without whole-analysis results.
+    pub fn excerpt(report: &Report, bundles: &BTreeSet<String>) -> Result<Self> {
+        let mut expected = Self::from_report(report)?;
+        expected.bundles.retain(|b| bundles.contains(&b.path));
+        (
+            expected.totals,
+            expected.scenario_totals,
+            expected.excluded_bundles,
+        ) = (None, None, None);
+        Ok(expected)
+    }
+
+    /// Human-readable differences; empty when the replay reproduced every recorded
+    /// result. Results absent from `self` are not compared.
     pub fn differences(&self, actual: &Self) -> Vec<String> {
         let mut out = Vec::new();
         let mut check = |what: &str, expected: String, actual: String| {
@@ -131,21 +180,27 @@ impl Expected {
             format!("{:?}", self.scenarios),
             format!("{:?}", actual.scenarios),
         );
-        check(
-            "totals",
-            format!("{:?}", self.totals),
-            format!("{:?}", actual.totals),
-        );
-        check(
-            "scenario totals",
-            format!("{:?}", self.scenario_totals),
-            format!("{:?}", actual.scenario_totals),
-        );
-        check(
-            "excluded bundles",
-            format!("{:?}", self.excluded_bundles),
-            format!("{:?}", actual.excluded_bundles),
-        );
+        if let Some(totals) = &self.totals {
+            check(
+                "totals",
+                format!("{totals:?}"),
+                format!("{:?}", actual.totals.as_ref().unwrap()),
+            );
+        }
+        if let Some(totals) = &self.scenario_totals {
+            check(
+                "scenario totals",
+                format!("{totals:?}"),
+                format!("{:?}", actual.scenario_totals.as_ref().unwrap()),
+            );
+        }
+        if let Some(excluded) = &self.excluded_bundles {
+            check(
+                "excluded bundles",
+                format!("{excluded:?}"),
+                format!("{:?}", actual.excluded_bundles.as_ref().unwrap()),
+            );
+        }
         let actual_bundles = actual
             .bundles
             .iter()
@@ -181,6 +236,14 @@ impl Expected {
     }
 }
 
+fn scenario_totals(report: &Report) -> BTreeMap<String, Counts> {
+    report
+        .scenario_reports
+        .iter()
+        .map(|s| (s.scenario.clone(), s.totals.clone()))
+        .collect()
+}
+
 /// Copies inputs into a new evidence directory. Files whose location matters to
 /// analysis (bundles, maps, roots) keep their layout below a common ancestor.
 pub struct Writer {
@@ -188,6 +251,8 @@ pub struct Writer {
     ancestor: PathBuf,
     files: BTreeMap<String, FileEntry>,
     inputs: usize,
+    derived: Vec<Derived>,
+    omitted: BTreeMap<String, FileEntry>,
 }
 
 impl Writer {
@@ -212,6 +277,8 @@ impl Writer {
             ancestor,
             files: BTreeMap::new(),
             inputs: 0,
+            derived: Vec::new(),
+            omitted: BTreeMap::new(),
         })
     }
 
@@ -243,42 +310,122 @@ impl Writer {
     /// A file whose location does not matter; its file name is kept (coverage
     /// scenario names come from it).
     pub fn input(&mut self, path: &Path, role: &str) -> Result<String> {
+        let relative = self.input_path(path)?;
+        self.copy(path, relative, role)
+    }
+
+    /// An input written as `data` instead of its original bytes, recorded with the
+    /// original's hash.
+    pub fn derived(
+        &mut self,
+        path: &Path,
+        data: &[u8],
+        role: &str,
+        removed_entries: usize,
+    ) -> Result<String> {
+        let relative = self.input_path(path)?;
+        let original = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+        self.derived.push(Derived {
+            path: relative.clone(),
+            original_sha256: sha256(&original),
+            removed_entries,
+        });
+        self.store(&relative, data, role)?;
+        Ok(relative)
+    }
+
+    /// Records an input the excerpt leaves out. Files copied anyway are not listed.
+    pub fn omit(&mut self, path: &Path, role: &str) -> Result<()> {
+        let relative = match self.tree_path(path) {
+            Ok(relative) => relative,
+            Err(_) => path
+                .file_name()
+                .with_context(|| format!("{} has no file name", path.display()))?
+                .to_string_lossy()
+                .into_owned(),
+        };
+        let data = fs::read(path).with_context(|| format!("read {}", path.display()))?;
+        self.omitted.entry(relative.clone()).or_insert(FileEntry {
+            path: relative,
+            role: role.into(),
+            sha256: sha256(&data),
+        });
+        Ok(())
+    }
+
+    fn input_path(&mut self, path: &Path) -> Result<String> {
         let name = path
             .file_name()
             .with_context(|| format!("{} has no file name", path.display()))?
             .to_string_lossy();
         let relative = format!("inputs/{}/{name}", self.inputs);
         self.inputs += 1;
-        self.copy(path, relative, role)
+        Ok(relative)
     }
 
     fn copy(&mut self, path: &Path, relative: String, role: &str) -> Result<String> {
         if !self.files.contains_key(&relative) {
             let data = fs::read(path).with_context(|| format!("read {}", path.display()))?;
-            let target = self.out.join(&relative);
-            fs::create_dir_all(target.parent().unwrap())?;
-            fs::write(&target, &data)?;
-            self.files.insert(
-                relative.clone(),
-                FileEntry {
-                    path: relative.clone(),
-                    role: role.into(),
-                    sha256: sha256(&data),
-                },
-            );
+            self.store(&relative, &data, role)?;
         }
         Ok(relative)
     }
 
-    pub fn finish(self, invocation: serde_json::Value, report: &Report) -> Result<()> {
+    fn store(&mut self, relative: &str, data: &[u8], role: &str) -> Result<()> {
+        let target = self.out.join(relative);
+        fs::create_dir_all(target.parent().unwrap())?;
+        fs::write(&target, data)?;
+        self.files.insert(
+            relative.into(),
+            FileEntry {
+                path: relative.into(),
+                role: role.into(),
+                sha256: sha256(data),
+            },
+        );
+        Ok(())
+    }
+
+    /// `selected` makes an excerpt: `(selectors, bundles)` from `--export-select`.
+    pub fn finish(
+        self,
+        invocation: serde_json::Value,
+        report: &Report,
+        selected: Option<(Vec<String>, BTreeSet<String>)>,
+    ) -> Result<()> {
+        let (kind, expected, excerpt) = match selected {
+            None => ("full", Expected::from_report(report)?, None),
+            Some((selectors, bundles)) => (
+                "excerpt",
+                Expected::excerpt(report, &bundles)?,
+                Some(Excerpt {
+                    selectors,
+                    bundles: bundles.into_iter().collect(),
+                    derived: self.derived,
+                    omitted: self
+                        .omitted
+                        .into_values()
+                        .filter(|f| !self.files.contains_key(&f.path))
+                        .collect(),
+                    full_analysis: FullAnalysis {
+                        reproducible: false,
+                        bundles: report.bundles.len(),
+                        totals: report.totals.clone(),
+                        scenario_totals: scenario_totals(report),
+                        excluded_bundles: report.excluded_bundles.clone(),
+                    },
+                }),
+            ),
+        };
         let manifest = Manifest {
             format: FORMAT.into(),
             schema_version: 1,
-            kind: "full".into(),
+            kind: kind.into(),
             analyzer: Analyzer::current(),
             invocation,
             files: self.files.into_values().collect(),
-            expected: Expected::from_report(report)?,
+            expected,
+            excerpt,
         };
         fs::write(
             self.out.join(MANIFEST),
@@ -301,8 +448,9 @@ pub fn open(dir: &Path) -> Result<Manifest> {
         manifest.format,
         manifest.schema_version
     );
-    if manifest.kind != "full" {
-        bail!("evidence kind {:?} cannot be replayed", manifest.kind);
+    match (manifest.kind.as_str(), &manifest.excerpt) {
+        ("full", None) | ("excerpt", Some(_)) => {}
+        (kind, _) => bail!("evidence kind {kind:?} cannot be replayed"),
     }
     for file in &manifest.files {
         ensure!(

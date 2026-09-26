@@ -108,6 +108,9 @@ pub struct BundleRow {
     pub omitted_mapping_diagnostics: usize,
     #[serde(flatten)]
     pub counts: Counts,
+    /// The source map file this bundle was attributed with; evidence excerpts copy it.
+    #[serde(skip)]
+    pub source_map_path: Option<PathBuf>,
 }
 
 /// A source-map mapping skipped during attribution, with enough context to inspect it.
@@ -458,6 +461,7 @@ pub fn analyze_with_options(
         let hash = sha256(content.as_bytes());
         let map_data = maps::load_with_location(&file, &content, dir, options.maps.get(&path))
             .with_context(|| format!("locate source map for {path}"))?;
+        let source_map_path = map_data.as_ref().and_then(|map| map.path.clone());
         let (segments, map_hash, mut sources, rejected) = if let Some(map) = map_data {
             report.read_files.extend(map.path.clone());
             let attribution::IndexedAttribution {
@@ -776,6 +780,7 @@ pub fn analyze_with_options(
             mapping_diagnostics,
             omitted_mapping_diagnostics: 0,
             counts,
+            source_map_path,
         });
     }
     ensure!(
